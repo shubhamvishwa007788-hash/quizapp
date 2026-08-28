@@ -1,0 +1,3999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiztext — pick a language, run the tests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1a1b26;
+    --bg-panel: #1f2133;
+    --bg-raised: #262838;
+    --line: #33364d;
+    --fg: #cdd0e3;
+    --fg-dim: #7a7ea3;
+    --fg-faint: #4c5073;
+    --green: #9ece6a;
+    --red: #f7768e;
+    --amber: #e0af68;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+
+    --accent: #7aa2f7;
+    --accent-dim: rgba(122,162,247,0.14);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: var(--accent-dim); color: var(--fg); }
+
+  .app{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+  }
+  .titlebar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 22px;
+  }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:10px; height:10px; border-radius:50%; }
+  .dot.r{ background:#f7768e33; border:1px solid #f7768e88;}
+  .dot.y{ background:#e0af6833; border:1px solid #e0af6888;}
+  .dot.g{ background:#9ece6a33; border:1px solid #9ece6a88;}
+  .titlebar .path{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    letter-spacing: 0.02em;
+  }
+  .titlebar .path b{ color: var(--fg); font-weight:600; }
+
+
+  .tabs{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0;
+    margin-bottom: 22px;
+  }
+  .tab{
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg-dim);
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    padding: 9px 14px 8px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    transform: translateY(1px);
+    transition: color .15s ease, background .15s ease;
+  }
+  .tab:hover{ color: var(--fg); }
+  .tab .sq{ width:8px; height:8px; border-radius:2px; flex:none; }
+  .tab.active{
+    color: var(--fg);
+    background: var(--bg-panel);
+    border-color: var(--line);
+    border-bottom: 2px solid var(--tab-color, var(--accent));
+    transform: translateY(2px);
+  }
+
+  /* ---------- panel ---------- */
+  .panel{
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* ---- picker screen ---- */
+  .picker{ padding: 34px 30px 38px; }
+  .picker h1{
+    font-family: var(--mono);
+    font-size: 20px;
+    margin: 0 0 6px;
+    color: var(--fg);
+  }
+  .picker h1 .kw{ color: var(--accent); }
+  .picker .sub{
+    color: var(--fg-dim);
+    font-size: 14.5px;
+    margin: 0 0 26px;
+    line-height:1.5;
+  }
+  .lang-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 480px){ .lang-grid{ grid-template-columns: 1fr; } }
+  .lang-card{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 14px 15px;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align:left;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .lang-card:hover{ transform: translateY(-1px); }
+  .lang-card .chip{
+    width: 34px; height: 34px;
+    border-radius: 7px;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 13px;
+    flex: none;
+    color: #1a1b26;
+  }
+  .lang-card .meta .name{
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--fg);
+  }
+  .lang-card .meta .count{
+    font-size: 12px;
+    color: var(--fg-dim);
+    margin-top: 2px;
+  }
+  .quizhead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 16px 22px;
+    border-bottom: 2px solid var(--line);
+  }
+  .quizhead .qcount{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+  }
+  .quizhead .score{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+  }
+  .quizhead .score b{ color: var(--green); }
+  .progress{
+    height: 3px;
+    background: var(--line);
+  }
+  .progress .fill{
+    height: 100%;
+    background: var(--tab-color, var(--accent));
+    transition: width .3s ease;
+  }
+
+  .qwrap{ padding: 26px 26px 24px; }
+  .qeyebrow{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-faint);
+    margin-bottom: 10px;
+  }
+  .qtext{
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--fg);
+    margin: 0 0 22px;
+    white-space: pre-wrap;
+  }
+  .qtext .cm{ color: var(--fg-dim); }
+
+  .options{ display:flex; flex-direction:column; gap:9px; }
+  .opt{
+    display:flex;
+    align-items:flex-start;
+    gap: 12px;
+    text-align:left;
+    width:100%;
+    padding: 12px 14px;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--fg);
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .opt:hover:not(:disabled){ border-color: var(--fg-faint); }
+  .opt .letter{
+    font-weight:700;
+    color: var(--fg-dim);
+    flex: none;
+  }
+  .opt:disabled{ cursor: default; }
+  .opt.correct{
+    border-color: var(--green);
+    background: rgba(158,206,106,0.10);
+  }
+  .opt.correct .letter{ color: var(--green); }
+  .opt.wrong{
+    border-color: var(--red);
+    background: rgba(247,118,142,0.10);
+  }
+  .opt.wrong .letter{ color: var(--red); }
+  .opt.dim{ opacity: 0.45; }
+
+  .feedback{
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    display:none;
+  }
+  .feedback.show{ display:block; }
+  .feedback .verdict{
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .feedback.ok .verdict{ color: var(--green); }
+  .feedback.bad .verdict{ color: var(--red); }
+  .feedback .exp{
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--fg-dim);
+  }
+  .feedback .exp .rem{
+    font-family: var(--mono);
+    color: var(--fg-faint);
+  }
+
+  .qfoot{
+    display:flex;
+    justify-content: flex-end;
+    padding: 0 26px 26px;
+  }
+  .btn{
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1b26;
+    background: var(--tab-color, var(--accent));
+    border: none;
+    padding: 11px 20px;
+    border-radius: 7px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .1s ease;
+  }
+  .btn.show{ opacity:1; pointer-events:auto; }
+  .btn:active{ transform: scale(0.97); }
+  .btn.ghost{
+    background: transparent;
+    color: var(--fg-dim);
+    border: 1px solid var(--line);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .btn.ghost:hover{ color: var(--fg); border-color: var(--fg-faint); }
+
+  /* ---- results screen ---- */
+  .results{ padding: 40px 30px 36px; text-align:center; }
+  .results .term{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    text-align:left;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 26px;
+    line-height: 1.8;
+  }
+  .results .term .p{ color: var(--fg-faint); }
+  .results .term .ok{ color: var(--green); }
+  .results .bignum{
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 52px;
+    color: var(--fg);
+    line-height:1;
+  }
+  .results .bignum span{ font-size: 24px; color: var(--fg-dim); font-weight:600; }
+  .results .msg{
+    font-size: 14.5px;
+    color: var(--fg-dim);
+    margin: 10px 0 28px;
+  }
+  .results .btnrow{
+    display:flex;
+    gap: 10px;
+    justify-content:center;
+    flex-wrap: wrap;
+  }
+  .results .btn{ opacity:1; pointer-events:auto; }
+
+  .hidden{ display:none !important; }
+
+  footer{
+    text-align:center;
+    color: var(--fg-faint);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    margin-top: 22px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="titlebar">
+    <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+    <div class="path">~/<b id="pathLang">Quiz</b></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="panel">
+    
+    <div class="picker" id="picker">
+      <h1><span class="kw">welcome</span> quiz = <span class="kw">new</span> Quiz;</h1>
+      <p class="sub">Pick a language below. Four options per question, one right answer</p>
+      <div class="lang-grid" id="langGrid"></div>
+    </div>
+    <div class="hidden" id="quizScreen">
+      <div class="quizhead">
+        <div class="qcount" id="qCount">Question 1 / 12</div>
+        <div class="score">score: <b id="scoreVal">0</b></div>
+      </div>
+      <div class="progress"><div class="fill" id="progressFill" style="width:0%"></div></div>
+      <div class="qwrap">
+        <div class="qeyebrow" id="qEyebrow">// javascript</div>
+        <div class="qtext" id="qText"></div>
+        <div class="options" id="options"></div>
+        <div class="feedback" id="feedback">
+          <div class="verdict" id="verdict"></div>
+          <div class="exp" id="exp"></div>
+        </div>
+      </div>
+      <div class="qfoot">
+        <button class="btn ghost hidden" id="quitBtn">Quit</button>
+        <button class="btn" id="nextBtn" style="margin-left:10px;">next →</button>
+      </div>
+    </div>
+    <div class="hidden" id="resultsScreen">
+      <div class="results">
+        <div class="term" id="termLog"></div>
+        <div class="bignum" id="finalScore">0<span>/12</span></div>
+        <div class="msg" id="finalMsg">nice work keep on.</div>
+        <div class="btnrow">
+          <button class="btn ghost" id="chooseBtn"> if you choose another language</button>
+          <button class="btn" id="retryBtn" style="opacity:1;pointer-events:auto;">retry this set</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>run tests → read the diff → learn something</footer>
+</div>
+
+<script>
+
+const BANK = {
+  "js": {
+    "name": "JavaScript",
+    "short": "JS",
+    "color": "#e0af68",
+    "q": [
+      {
+        "q": "What does `typeof NaN` return?",
+        "o": [
+          "\"number\"",
+          "\"NaN\"",
+          "\"undefined\"",
+          "\"object\""
+        ],
+        "a": 0,
+        "e": "NaN stands for 'Not a Number', but ironically its type IS \"number\" — it's just a special numeric value representing an invalid result."
+      },
+      {
+        "q": "Which method adds one or more elements to the end of an array?",
+        "o": [
+          ".append()",
+          ".push()",
+          ".add()",
+          ".concat()"
+        ],
+        "a": 1,
+        "e": ".push() mutates the array in place and adds to the end. .concat() returns a new array instead of mutating."
+      },
+      {
+        "q": "What is the output of `[] + []` in JavaScript?",
+        "o": [
+          "[]",
+          "0",
+          "\"\" (empty string)",
+          "undefined"
+        ],
+        "a": 2,
+        "e": "Both arrays are coerced to strings (\"\") and concatenated, producing an empty string."
+      },
+      {
+        "q": "Which keyword declares a block-scoped variable that can be reassigned?",
+        "o": [
+          "const",
+          "var",
+          "let",
+          "static"
+        ],
+        "a": 2,
+        "e": "let is block-scoped and reassignable. const is block-scoped but not reassignable; var is function-scoped."
+      },
+      {
+        "q": "What does `===` check that `==` does not?",
+        "o": [
+          "Variable name",
+          "Type, in addition to value",
+          "Memory address",
+          "Nothing, they're identical"
+        ],
+        "a": 1,
+        "e": "=== is strict equality: it compares both value and type without coercion. == allows type coercion before comparing."
+      },
+      {
+        "q": "What will `console.log(typeof null)` print?",
+        "o": [
+          "\"null\"",
+          "\"undefined\"",
+          "\"object\"",
+          "\"boolean\""
+        ],
+        "a": 2,
+        "e": "This is a famous JS quirk — typeof null returns \"object\" due to a legacy bug that was never fixed."
+      },
+      {
+        "q": "Which array method creates a new array with results of calling a function on every element?",
+        "o": [
+          ".forEach()",
+          ".map()",
+          ".filter()",
+          ".reduce()"
+        ],
+        "a": 1,
+        "e": ".map() transforms each element and returns a new array. .forEach() returns undefined; .filter() selects elements."
+      },
+      {
+        "q": "What is a closure?",
+        "o": [
+          "A syntax error",
+          "A function bundled with its lexical scope",
+          "A loop that never ends",
+          "A way to close a file"
+        ],
+        "a": 1,
+        "e": "A closure lets an inner function remember variables from its outer function's scope even after that function returns."
+      },
+      {
+        "q": "What does `Array.isArray([1,2,3])` return?",
+        "o": [
+          "true",
+          "false",
+          "\"array\"",
+          "undefined"
+        ],
+        "a": 0,
+        "e": "Array.isArray() correctly identifies actual arrays, more reliable than typeof (which returns \"object\")."
+      },
+      {
+        "q": "What value does an `async` function always return?",
+        "o": [
+          "A callback",
+          "A Promise",
+          "undefined",
+          "The awaited value directly"
+        ],
+        "a": 1,
+        "e": "async functions always wrap their return value in a Promise, even if you return a plain value."
+      },
+      {
+        "q": "Which of these correctly checks if a variable is undefined?",
+        "o": [
+          "x = undefined",
+          "x == undefined",
+          "typeof x === 'undefined'",
+          "x.isUndefined()"
+        ],
+        "a": 2,
+        "e": "typeof x === 'undefined' is safest because it won't throw even if x was never declared."
+      },
+      {
+        "q": "What does the spread operator `...` do to an array `[1,2,3]`?",
+        "o": [
+          "Sorts it",
+          "Expands its elements individually",
+          "Deletes it",
+          "Reverses it"
+        ],
+        "a": 1,
+        "e": "Spread unpacks array elements individually — useful for copying, merging, or passing as function arguments."
+      },
+      {
+        "q": "What does `JSON.stringify()` do?",
+        "o": [
+          "Parses a JSON string into an object",
+          "Converts a JS value into a JSON string",
+          "Validates JSON syntax",
+          "Deletes JSON keys"
+        ],
+        "a": 1,
+        "e": "JSON.stringify() serializes a JavaScript object or value into a JSON-formatted string."
+      },
+      {
+        "q": "What is the result of `2 + '2'` in JavaScript?",
+        "o": [
+          "4",
+          "\"22\"",
+          "NaN",
+          "Error"
+        ],
+        "a": 1,
+        "e": "The number 2 is coerced to a string and concatenated with '2', producing the string \"22\"."
+      },
+      {
+        "q": "Which method removes the last element from an array?",
+        "o": [
+          ".shift()",
+          ".pop()",
+          ".remove()",
+          ".splice(0)"
+        ],
+        "a": 1,
+        "e": ".pop() removes and returns the last element of an array. .shift() removes the first element instead."
+      },
+      {
+        "q": "What does `let` provide that `var` does not?",
+        "o": [
+          "Global scope",
+          "Block scope",
+          "Faster execution",
+          "Automatic type conversion"
+        ],
+        "a": 1,
+        "e": "let is scoped to the nearest enclosing block ({}), while var is function-scoped and ignores block boundaries."
+      },
+      {
+        "q": "What is the purpose of the `this` keyword in a regular function?",
+        "o": [
+          "Always refers to the global object",
+          "Refers to the object that called the function",
+          "Refers to the function itself",
+          "Is always undefined"
+        ],
+        "a": 1,
+        "e": "In a regular function, `this` is determined by how the function is called — typically the object it's invoked on."
+      },
+      {
+        "q": "What does `Object.keys(obj)` return?",
+        "o": [
+          "The values of an object",
+          "An array of the object's own enumerable property names",
+          "The object's prototype",
+          "A boolean"
+        ],
+        "a": 1,
+        "e": "Object.keys() returns an array containing the object's own enumerable property names as strings."
+      },
+      {
+        "q": "What is event bubbling in the DOM?",
+        "o": [
+          "Events firing in random order",
+          "An event propagating from the target element up through its ancestors",
+          "A memory leak pattern",
+          "A CSS animation technique"
+        ],
+        "a": 1,
+        "e": "Event bubbling means an event triggered on a child element also fires on its parent elements, moving up the DOM tree."
+      },
+      {
+        "q": "What does the `??` (nullish coalescing) operator do?",
+        "o": [
+          "Returns the right operand only if the left is null or undefined",
+          "Performs logical AND",
+          "Compares types strictly",
+          "Throws an error on null"
+        ],
+        "a": 0,
+        "e": "?? returns the right-hand value only when the left is null or undefined, unlike || which also triggers on falsy values like 0 or ''."
+      },
+      {
+        "q": "What does `Array.prototype.reduce()` do?",
+        "o": [
+          "Removes duplicate elements",
+          "Reduces an array to a single accumulated value",
+          "Sorts the array in place",
+          "Splits an array into chunks"
+        ],
+        "a": 1,
+        "e": "reduce() applies a function against an accumulator and each element to reduce the array to a single value."
+      },
+      {
+        "q": "What is a Promise in JavaScript?",
+        "o": [
+          "A synchronous function call",
+          "An object representing the eventual result of an async operation",
+          "A type of loop",
+          "A CSS property"
+        ],
+        "a": 1,
+        "e": "A Promise represents a value that may be available now, later, or never, from an asynchronous operation."
+      },
+      {
+        "q": "What does `Array.prototype.find()` return when no element matches?",
+        "o": [
+          "null",
+          "undefined",
+          "-1",
+          "an empty array"
+        ],
+        "a": 1,
+        "e": "find() returns undefined if no element in the array satisfies the provided testing function, unlike indexOf which returns -1."
+      },
+      {
+        "q": "What is the difference between `null` and `undefined`?",
+        "o": [
+          "They are exactly the same",
+          "undefined means a variable was declared but not assigned; null is an explicit 'no value'",
+          "null is a data type; undefined is not",
+          "There is no difference in modern JS"
+        ],
+        "a": 1,
+        "e": "undefined is the default value of uninitialized variables, while null is explicitly assigned to represent 'no value'."
+      },
+      {
+        "q": "What does the `map` data structure in JS allow as keys, unlike plain objects?",
+        "o": [
+          "Only strings",
+          "Any value, including objects and functions",
+          "Only numbers",
+          "Nothing different"
+        ],
+        "a": 1,
+        "e": "A Map can use any value — objects, functions, even NaN — as a key, while plain object keys are coerced to strings."
+      },
+      {
+        "q": "What does `Array.prototype.some()` return?",
+        "o": [
+          "The first matching element",
+          "true if at least one element passes the test, otherwise false",
+          "The count of matching elements",
+          "A new filtered array"
+        ],
+        "a": 1,
+        "e": "some() tests whether at least one element in the array passes the provided function, returning a boolean."
+      },
+      {
+        "q": "What is 'hoisting' in JavaScript?",
+        "o": [
+          "Moving code to a CDN",
+          "Variable and function declarations being moved to the top of their scope during compilation",
+          "A CSS layout technique",
+          "Deleting unused variables"
+        ],
+        "a": 1,
+        "e": "Hoisting means declarations (not initializations) are conceptually moved to the top of their scope before code executes."
+      },
+      {
+        "q": "What does the `try...catch` block do?",
+        "o": [
+          "Prevents all errors from ever happening",
+          "Lets you handle errors gracefully without crashing the program",
+          "Only works with async code",
+          "Automatically fixes bugs"
+        ],
+        "a": 1,
+        "e": "try...catch lets you attempt code that might throw an error and handle that error instead of letting it crash the program."
+      },
+      {
+        "q": "What does `Array.prototype.slice()` do?",
+        "o": [
+          "Mutates the original array by removing elements",
+          "Returns a shallow copy of a portion of an array without mutating it",
+          "Sorts the array",
+          "Joins array elements into a string"
+        ],
+        "a": 1,
+        "e": "slice() returns a new array containing a portion of the original, leaving the original array unchanged."
+      },
+      {
+        "q": "What is a template literal in JavaScript?",
+        "o": [
+          "A CSS template",
+          "A string literal allowing embedded expressions, using backticks",
+          "A type of loop",
+          "A JSON schema"
+        ],
+        "a": 1,
+        "e": "Template literals use backticks (`) and allow embedded expressions with ${} syntax, e.g. `Hello, ${name}`."
+      },
+      {
+        "q": "What does `Array.prototype.includes()` check?",
+        "o": [
+          "If an array is empty",
+          "Whether an array contains a certain value",
+          "The array's length",
+          "If an array is sorted"
+        ],
+        "a": 1,
+        "e": "includes() returns true or false depending on whether the array contains the specified value."
+      },
+      {
+        "q": "What is the output of `typeof function(){}`?",
+        "o": [
+          "\"object\"",
+          "\"function\"",
+          "\"undefined\"",
+          "\"method\""
+        ],
+        "a": 1,
+        "e": "Functions have their own typeof result in JavaScript: \"function\", even though they are technically objects."
+      },
+      {
+        "q": "What does `Object.freeze()` do to an object?",
+        "o": [
+          "Deletes all its properties",
+          "Prevents new properties from being added and existing ones from being modified",
+          "Converts it to a string",
+          "Makes it iterable"
+        ],
+        "a": 1,
+        "e": "Object.freeze() makes an object immutable — you can't add, remove, or change its properties afterward."
+      },
+      {
+        "q": "What is the purpose of the `export` keyword in ES modules?",
+        "o": [
+          "To delete a variable",
+          "To make a value available for import in other files",
+          "To minify code",
+          "To declare a constant"
+        ],
+        "a": 1,
+        "e": "export makes functions, objects, or values from one module accessible to other modules via import."
+      },
+      {
+        "q": "What does `Array.prototype.every()` return?",
+        "o": [
+          "true only if every element passes the test",
+          "true if at least one element passes",
+          "The first passing element",
+          "The array's length"
+        ],
+        "a": 0,
+        "e": "every() tests whether all elements in the array pass the provided function, returning a single boolean."
+      },
+      {
+        "q": "What is destructuring assignment used for?",
+        "o": [
+          "Deleting object properties",
+          "Unpacking values from arrays or properties from objects into distinct variables",
+          "Combining two arrays",
+          "Converting types"
+        ],
+        "a": 1,
+        "e": "Destructuring lets you extract multiple values from arrays or objects in a single, concise statement."
+      },
+      {
+        "q": "What does the `await` keyword do?",
+        "o": [
+          "Pauses execution of an async function until a Promise resolves",
+          "Immediately rejects a Promise",
+          "Converts a callback to a function",
+          "Only works outside of functions"
+        ],
+        "a": 0,
+        "e": "await pauses an async function's execution until the awaited Promise settles, then returns its resolved value."
+      },
+      {
+        "q": "What is a callback function?",
+        "o": [
+          "A function that calls itself",
+          "A function passed as an argument to be executed later",
+          "A syntax error",
+          "A CSS pseudo-class"
+        ],
+        "a": 1,
+        "e": "A callback is a function passed into another function as an argument, to be invoked at a later point, often after an async task completes."
+      },
+      {
+        "q": "What does `Number.isInteger(4.0)` return?",
+        "o": [
+          "false",
+          "true",
+          "\"integer\"",
+          "undefined"
+        ],
+        "a": 1,
+        "e": "4.0 is stored as the integer value 4 in JS (no separate float type), so Number.isInteger returns true."
+      },
+      {
+        "q": "What is the purpose of `Array.from()`?",
+        "o": [
+          "To delete an array",
+          "To create a new array from an array-like or iterable object",
+          "To sort an array",
+          "To reverse an array"
+        ],
+        "a": 1,
+        "e": "Array.from() converts array-like objects (like NodeList or arguments) or iterables (like strings) into real arrays."
+      },
+      {
+        "q": "What does strict mode (`'use strict'`) do?",
+        "o": [
+          "Makes JavaScript run faster always",
+          "Catches common coding errors and unsafe actions, throwing errors instead of failing silently",
+          "Disables all functions",
+          "Converts code to TypeScript"
+        ],
+        "a": 1,
+        "e": "Strict mode enforces stricter parsing and error handling, catching mistakes that would otherwise fail silently."
+      },
+      {
+        "q": "What is the output of `[1, 2, 3].length`?",
+        "o": [
+          "2",
+          "3",
+          "undefined",
+          "Error"
+        ],
+        "a": 1,
+        "e": "The length property of an array returns the number of elements it contains, which is 3."
+      },
+      {
+        "q": "What does `Array.prototype.sort()` do by default (with no comparator)?",
+        "o": [
+          "Sorts numbers numerically",
+          "Sorts elements as strings, in ascending Unicode order",
+          "Sorts randomly",
+          "Throws an error"
+        ],
+        "a": 1,
+        "e": "Without a comparator, sort() converts elements to strings and compares Unicode code points, which can sort numbers incorrectly (e.g. 10 before 2)."
+      },
+      {
+        "q": "What is an IIFE?",
+        "o": [
+          "A type of loop",
+          "An Immediately Invoked Function Expression, executed right after it's defined",
+          "A CSS selector",
+          "A debugging tool"
+        ],
+        "a": 1,
+        "e": "An IIFE is a function expression that runs as soon as it's defined, often used to create isolated scope."
+      },
+      {
+        "q": "What does `Array.prototype.flat()` do?",
+        "o": [
+          "Flattens nested arrays into a single-level array",
+          "Sorts an array flatly",
+          "Converts an array to an object",
+          "Removes falsy values"
+        ],
+        "a": 0,
+        "e": "flat() creates a new array with all sub-array elements concatenated into it, up to the specified depth."
+      },
+      {
+        "q": "What is the purpose of a `Set` in JavaScript?",
+        "o": [
+          "To store key-value pairs",
+          "To store a collection of unique values",
+          "To create asynchronous code",
+          "To style DOM elements"
+        ],
+        "a": 1,
+        "e": "A Set is a collection that only stores unique values — duplicates are automatically ignored."
+      },
+      {
+        "q": "What does `Array.prototype.indexOf()` return if the item isn't found?",
+        "o": [
+          "null",
+          "undefined",
+          "-1",
+          "0"
+        ],
+        "a": 2,
+        "e": "indexOf() returns -1 when the specified value isn't present in the array."
+      },
+      {
+        "q": "What is the difference between `let` and `const`?",
+        "o": [
+          "No difference",
+          "const cannot be reassigned after initialization; let can",
+          "let is global, const is local",
+          "const is faster at runtime"
+        ],
+        "a": 1,
+        "e": "const creates a variable binding that cannot be reassigned, whereas let allows reassignment."
+      },
+      {
+        "q": "What does the `instanceof` operator check?",
+        "o": [
+          "If a value is a number",
+          "If an object is an instance of a particular class or constructor",
+          "If two values are equal",
+          "If a variable is undefined"
+        ],
+        "a": 1,
+        "e": "instanceof checks whether an object's prototype chain includes the prototype of a given constructor."
+      },
+      {
+        "q": "What does `Array.prototype.join()` do?",
+        "o": [
+          "Merges two arrays",
+          "Converts array elements into a single string, separated by a given delimiter",
+          "Sorts an array",
+          "Removes elements"
+        ],
+        "a": 1,
+        "e": "join() concatenates all array elements into a string, using the specified separator (default is a comma)."
+      }
+    ]
+  },
+  "python": {
+    "name": "Python",
+    "short": "PY",
+    "color": "#7aa2f7",
+    "q": [
+      {
+        "q": "What is the output of `3 // 2` in Python?",
+        "o": [
+          "1.5",
+          "1",
+          "2",
+          "1.0"
+        ],
+        "a": 1,
+        "e": "// is floor division — it divides and rounds down to the nearest whole number, so 3 // 2 = 1."
+      },
+      {
+        "q": "Which data type is immutable in Python?",
+        "o": [
+          "list",
+          "dict",
+          "tuple",
+          "set"
+        ],
+        "a": 2,
+        "e": "Tuples cannot be changed after creation. Lists, dicts, and sets are all mutable."
+      },
+      {
+        "q": "What does `len([1,2,3])` return?",
+        "o": [
+          "2",
+          "3",
+          "1",
+          "Error"
+        ],
+        "a": 1,
+        "e": "len() returns the number of items in the list, which is 3."
+      },
+      {
+        "q": "How do you define a function in Python?",
+        "o": [
+          "function myFunc():",
+          "def myFunc():",
+          "func myFunc():",
+          "void myFunc():"
+        ],
+        "a": 1,
+        "e": "Python uses the `def` keyword to define functions, followed by a colon and indented body."
+      },
+      {
+        "q": "What does `range(3)` produce when converted to a list?",
+        "o": [
+          "[1, 2, 3]",
+          "[0, 1, 2]",
+          "[0, 1, 2, 3]",
+          "[3]"
+        ],
+        "a": 1,
+        "e": "range(3) generates numbers starting at 0 up to (but not including) 3: [0, 1, 2]."
+      },
+      {
+        "q": "What is a Python list comprehension used for?",
+        "o": [
+          "Compressing files",
+          "Creating a list in one concise expression",
+          "Comparing two lists",
+          "Deleting list items"
+        ],
+        "a": 1,
+        "e": "List comprehensions like [x*2 for x in range(5)] build a new list concisely in a single readable line."
+      },
+      {
+        "q": "What does `*args` allow a function to accept?",
+        "o": [
+          "Only one argument",
+          "A variable number of positional arguments",
+          "Keyword arguments only",
+          "No arguments"
+        ],
+        "a": 1,
+        "e": "*args collects any number of extra positional arguments into a tuple inside the function."
+      },
+      {
+        "q": "Which keyword is used to handle exceptions in Python?",
+        "o": [
+          "catch",
+          "except",
+          "rescue",
+          "handle"
+        ],
+        "a": 1,
+        "e": "Python uses try/except blocks, unlike languages such as Java or JS which use try/catch."
+      },
+      {
+        "q": "What does `\"hello\"[::-1]` produce?",
+        "o": [
+          "\"hello\"",
+          "\"olleh\"",
+          "Error",
+          "\"h\""
+        ],
+        "a": 1,
+        "e": "The slice [::-1] steps backward through the string, reversing it to \"olleh\"."
+      },
+      {
+        "q": "What is the correct way to import the `math` module?",
+        "o": [
+          "#include math",
+          "import math",
+          "using math",
+          "require('math')"
+        ],
+        "a": 1,
+        "e": "Python uses the `import` statement to bring in modules, e.g. `import math`."
+      },
+      {
+        "q": "What does `is` compare in Python, unlike `==`?",
+        "o": [
+          "String length",
+          "Object identity (same object in memory)",
+          "Data type only",
+          "Nothing different"
+        ],
+        "a": 1,
+        "e": "`is` checks whether two references point to the exact same object in memory, while `==` checks value equality."
+      },
+      {
+        "q": "What will `type(5 / 2)` return in Python 3?",
+        "o": [
+          "<class 'int'>",
+          "<class 'float'>",
+          "<class 'double'>",
+          "Error"
+        ],
+        "a": 1,
+        "e": "In Python 3, the `/` operator always performs true division and returns a float, even for two integers."
+      },
+      {
+        "q": "What does the `self` parameter represent in a class method?",
+        "o": [
+          "The class itself",
+          "The instance the method is called on",
+          "A global variable",
+          "A reserved keyword with no purpose"
+        ],
+        "a": 1,
+        "e": "self refers to the specific instance of the class, giving methods access to that instance's attributes."
+      },
+      {
+        "q": "What does `dict.get('key', 'default')` do if 'key' is missing?",
+        "o": [
+          "Raises a KeyError",
+          "Returns 'default' instead of raising an error",
+          "Adds 'key' to the dict",
+          "Returns None always"
+        ],
+        "a": 1,
+        "e": ".get() returns a fallback default value instead of raising a KeyError when the key doesn't exist."
+      },
+      {
+        "q": "What is a decorator in Python?",
+        "o": [
+          "A comment style",
+          "A function that modifies the behavior of another function",
+          "A type of loop",
+          "A CSS-like styling tool"
+        ],
+        "a": 1,
+        "e": "A decorator wraps a function to extend or modify its behavior, often using the @decorator syntax."
+      },
+      {
+        "q": "What does `list.append(x)` do compared to `list.extend(x)`?",
+        "o": [
+          "append adds x as a single element; extend adds each item of x individually",
+          "They are identical",
+          "append only works on strings",
+          "extend removes elements"
+        ],
+        "a": 0,
+        "e": "append() adds its argument as one single element, while extend() iterates over its argument and adds each item separately."
+      },
+      {
+        "q": "What is the purpose of `__init__` in a Python class?",
+        "o": [
+          "To delete an instance",
+          "To initialize a new instance's attributes when it's created",
+          "To import the class",
+          "To convert the class to a string"
+        ],
+        "a": 1,
+        "e": "__init__ is the constructor method, automatically called when a new instance of the class is created."
+      },
+      {
+        "q": "What does a Python generator function use instead of `return`?",
+        "o": [
+          "break",
+          "yield",
+          "continue",
+          "pass"
+        ],
+        "a": 1,
+        "e": "yield produces a value and pauses the function's state, allowing it to resume later — ideal for lazy iteration."
+      },
+      {
+        "q": "What is the result of `bool([])` in Python?",
+        "o": [
+          "True",
+          "False",
+          "None",
+          "Error"
+        ],
+        "a": 1,
+        "e": "Empty containers like [], {}, and '' are falsy in Python, so bool([]) evaluates to False."
+      },
+      {
+        "q": "What does `with open('file.txt') as f:` provide over a plain `open()` call?",
+        "o": [
+          "Faster file reading",
+          "Automatic closing of the file when the block ends",
+          "Encryption of the file",
+          "It reads the file backwards"
+        ],
+        "a": 1,
+        "e": "The `with` statement is a context manager that automatically closes the file, even if an exception occurs."
+      },
+      {
+        "q": "What does `set([1,2,2,3])` produce?",
+        "o": [
+          "{1, 2, 2, 3}",
+          "{1, 2, 3}",
+          "[1, 2, 3]",
+          "Error"
+        ],
+        "a": 1,
+        "e": "A set automatically removes duplicate values, so it produces {1, 2, 3}."
+      },
+      {
+        "q": "What is a lambda function?",
+        "o": [
+          "A named multi-line function",
+          "A small anonymous function defined with the `lambda` keyword",
+          "A class method",
+          "A type of exception"
+        ],
+        "a": 1,
+        "e": "lambda creates a small, unnamed, single-expression function, e.g. `lambda x: x * 2`."
+      },
+      {
+        "q": "What does `f\"{name} is {age}\"` represent in Python?",
+        "o": [
+          "A regular string with no formatting",
+          "An f-string that embeds variable values directly into the string",
+          "A dictionary",
+          "A syntax error"
+        ],
+        "a": 1,
+        "e": "f-strings (prefixed with f) let you embed expressions directly inside string literals using {}."
+      },
+      {
+        "q": "What does `list[1:3]` return for `list = [10,20,30,40]`?",
+        "o": [
+          "[10, 20]",
+          "[20, 30]",
+          "[20, 30, 40]",
+          "[10, 20, 30]"
+        ],
+        "a": 1,
+        "e": "Slicing [1:3] returns elements from index 1 up to (not including) index 3: [20, 30]."
+      },
+      {
+        "q": "What is the difference between a Python list and a tuple?",
+        "o": [
+          "No difference",
+          "Lists are mutable, tuples are immutable",
+          "Tuples can only hold numbers",
+          "Lists must be sorted"
+        ],
+        "a": 1,
+        "e": "Lists can be modified after creation (add, remove, change items), while tuples cannot be changed once created."
+      },
+      {
+        "q": "What does `super()` do in a subclass?",
+        "o": [
+          "Deletes the parent class",
+          "Gives access to methods of the parent class",
+          "Creates a new class",
+          "Converts the object to a string"
+        ],
+        "a": 1,
+        "e": "super() lets a subclass call methods (like __init__) defined in its parent class, supporting proper inheritance."
+      },
+      {
+        "q": "What does the `in` keyword check when used like `'a' in 'cat'`?",
+        "o": [
+          "If 'a' is a variable",
+          "If 'a' is a substring/member of the sequence",
+          "The index of 'a'",
+          "If the string is empty"
+        ],
+        "a": 1,
+        "e": "`in` tests membership — here, whether the character 'a' appears within the string 'cat'."
+      },
+      {
+        "q": "What does `zip([1,2],[3,4])` produce when converted to a list?",
+        "o": [
+          "[[1,3],[2,4]]",
+          "[(1, 3), (2, 4)]",
+          "[1, 2, 3, 4]",
+          "Error"
+        ],
+        "a": 1,
+        "e": "zip() pairs elements from each iterable positionally, producing tuples: [(1, 3), (2, 4)]."
+      },
+      {
+        "q": "What exception is raised when dividing by zero in Python?",
+        "o": [
+          "ValueError",
+          "ZeroDivisionError",
+          "TypeError",
+          "IndexError"
+        ],
+        "a": 1,
+        "e": "Python raises a ZeroDivisionError specifically when a division or modulo operation has zero as the divisor."
+      },
+      {
+        "q": "What does `sorted([3,1,2], reverse=True)` return?",
+        "o": [
+          "[1, 2, 3]",
+          "[3, 2, 1]",
+          "[2, 1, 3]",
+          "Error"
+        ],
+        "a": 1,
+        "e": "reverse=True sorts the list in descending order, producing [3, 2, 1]."
+      },
+      {
+        "q": "What is the purpose of `__name__ == '__main__'`?",
+        "o": [
+          "To name the file",
+          "To check if the script is being run directly, not imported",
+          "To declare the main class",
+          "To handle exceptions"
+        ],
+        "a": 1,
+        "e": "This idiom lets code run only when the file is executed directly, not when it's imported as a module elsewhere."
+      },
+      {
+        "q": "What does a Python dictionary comprehension look like?",
+        "o": [
+          "{k: v for k, v in items}",
+          "[k: v for k, v in items]",
+          "(k: v for k, v in items)",
+          "{k, v for k, v in items}"
+        ],
+        "a": 0,
+        "e": "Dictionary comprehensions use curly braces with a key:value pair expression, e.g. {k: v for k, v in items}."
+      },
+      {
+        "q": "What does `str.strip()` do?",
+        "o": [
+          "Deletes the string entirely",
+          "Removes leading and trailing whitespace by default",
+          "Converts to uppercase",
+          "Splits the string into a list"
+        ],
+        "a": 1,
+        "e": "strip() removes whitespace (or specified characters) from both ends of a string, leaving the middle untouched."
+      },
+      {
+        "q": "What does `isinstance(x, int)` check?",
+        "o": [
+          "If x is exactly named 'int'",
+          "If x is an instance of the int type (or a subclass)",
+          "If x is a string",
+          "Always returns True"
+        ],
+        "a": 1,
+        "e": "isinstance() checks whether an object is of a specified type or class, including subclasses, which is safer than comparing type() directly."
+      },
+      {
+        "q": "What does the `pass` statement do in Python?",
+        "o": [
+          "Raises an error",
+          "Does nothing — acts as a placeholder where syntax requires a statement",
+          "Skips the current loop iteration",
+          "Ends the program"
+        ],
+        "a": 1,
+        "e": "pass is a null operation used as a placeholder when a statement is syntactically required but no action is needed yet."
+      },
+      {
+        "q": "What does `list.pop()` do without an argument?",
+        "o": [
+          "Removes and returns the first element",
+          "Removes and returns the last element",
+          "Removes all elements",
+          "Raises an error always"
+        ],
+        "a": 1,
+        "e": "pop() without an index removes and returns the last element of the list."
+      },
+      {
+        "q": "What does `enumerate(['a','b'])` provide when iterated?",
+        "o": [
+          "Just the values",
+          "Index-value pairs like (0, 'a'), (1, 'b')",
+          "A dictionary",
+          "A single string"
+        ],
+        "a": 1,
+        "e": "enumerate() pairs each item with its index, which is useful when you need both the position and the value in a loop."
+      },
+      {
+        "q": "What is the result of `'abc' * 3`?",
+        "o": [
+          "Error, strings can't be multiplied",
+          "'abcabcabc'",
+          "'abc3'",
+          "9"
+        ],
+        "a": 1,
+        "e": "Multiplying a string by an integer repeats it that many times, producing 'abcabcabc'."
+      },
+      {
+        "q": "What does `try / except / finally` guarantee about the `finally` block?",
+        "o": [
+          "It only runs if an exception occurs",
+          "It always runs, whether or not an exception occurred",
+          "It never runs if except catches something",
+          "It replaces the except block"
+        ],
+        "a": 1,
+        "e": "The finally block always executes after try/except, regardless of whether an exception was raised or caught — ideal for cleanup."
+      },
+      {
+        "q": "What does `map(str, [1,2,3])` return in Python 3?",
+        "o": [
+          "A list",
+          "A map object (iterator) that must be converted, e.g. with list()",
+          "A string",
+          "An error"
+        ],
+        "a": 1,
+        "e": "map() returns a lazy iterator in Python 3, not a list — you need list(map(...)) to materialize the results."
+      },
+      {
+        "q": "What is duck typing in Python?",
+        "o": [
+          "A strict type-checking system",
+          "An object's suitability is determined by its methods/behavior, not its class",
+          "A way to type function arguments explicitly",
+          "A debugging tool"
+        ],
+        "a": 1,
+        "e": "Duck typing means Python cares about whether an object supports the needed methods/behavior, not its exact class — 'if it walks like a duck...'."
+      },
+      {
+        "q": "What does `list(reversed([1,2,3]))` return?",
+        "o": [
+          "[1, 2, 3]",
+          "[3, 2, 1]",
+          "Error",
+          "None"
+        ],
+        "a": 1,
+        "e": "reversed() returns an iterator that traverses the sequence backward; wrapped in list(), it produces [3, 2, 1]."
+      },
+      {
+        "q": "What does `not None` evaluate to?",
+        "o": [
+          "None",
+          "False",
+          "True",
+          "Error"
+        ],
+        "a": 2,
+        "e": "None is falsy in Python, so applying `not` to it evaluates to True."
+      },
+      {
+        "q": "What does `str.split(',')` do to `'a,b,c'`?",
+        "o": [
+          "Returns 'a,b,c' unchanged",
+          "Returns ['a', 'b', 'c']",
+          "Returns a single string 'abc'",
+          "Raises an error"
+        ],
+        "a": 1,
+        "e": "split(',') breaks the string into a list of substrings wherever the comma appears: ['a', 'b', 'c']."
+      },
+      {
+        "q": "What does the walrus operator `:=` do?",
+        "o": [
+          "Divides two numbers",
+          "Assigns a value to a variable as part of an expression",
+          "Compares two values",
+          "Creates a tuple"
+        ],
+        "a": 1,
+        "e": "The walrus operator lets you assign a value to a variable within a larger expression, e.g. `if (n := len(a)) > 10:`."
+      },
+      {
+        "q": "What does `abs(-7)` return?",
+        "o": [
+          "-7",
+          "7",
+          "0",
+          "Error"
+        ],
+        "a": 1,
+        "e": "abs() returns the absolute (non-negative) value of a number, so abs(-7) is 7."
+      },
+      {
+        "q": "What is a Python module?",
+        "o": [
+          "A single function",
+          "A file containing Python code (functions, classes, variables) that can be imported",
+          "A type of loop",
+          "A built-in data type"
+        ],
+        "a": 1,
+        "e": "A module is simply a .py file whose contents (functions, classes, variables) can be reused via import elsewhere."
+      },
+      {
+        "q": "What does `all([True, True, False])` return?",
+        "o": [
+          "True",
+          "False",
+          "None",
+          "Error"
+        ],
+        "a": 1,
+        "e": "all() returns True only if every element in the iterable is truthy; since one element is False, it returns False."
+      },
+      {
+        "q": "What does `class Dog(Animal):` express?",
+        "o": [
+          "Dog is a variable of type Animal",
+          "Dog is a subclass that inherits from Animal",
+          "Dog and Animal are unrelated",
+          "A syntax error"
+        ],
+        "a": 1,
+        "e": "This syntax declares Dog as a subclass of Animal, inheriting its attributes and methods."
+      },
+      {
+        "q": "What does `x, y = y, x` do in Python?",
+        "o": [
+          "Causes a syntax error",
+          "Swaps the values of x and y",
+          "Deletes x and y",
+          "Creates a tuple named x"
+        ],
+        "a": 1,
+        "e": "Python allows tuple unpacking on assignment, making variable swaps possible in a single concise line."
+      }
+    ]
+  },
+  "java": {
+    "name": "Java",
+    "short": "JV",
+    "color": "#f7768e",
+    "q": [
+      {
+        "q": "Which keyword is used to create a subclass in Java?",
+        "o": [
+          "implements",
+          "extends",
+          "inherits",
+          "super"
+        ],
+        "a": 1,
+        "e": "`extends` is used for class inheritance. `implements` is used for interfaces instead."
+      },
+      {
+        "q": "What is the entry point method for a Java application?",
+        "o": [
+          "start()",
+          "run()",
+          "main()",
+          "init()"
+        ],
+        "a": 2,
+        "e": "Every standalone Java program begins execution in `public static void main(String[] args)`."
+      },
+      {
+        "q": "Which of these is a primitive type in Java?",
+        "o": [
+          "String",
+          "Integer",
+          "int",
+          "Array"
+        ],
+        "a": 2,
+        "e": "`int` is a primitive type. String and Integer are reference/object types (Integer is the wrapper class for int)."
+      },
+      {
+        "q": "What does the `final` keyword do to a variable?",
+        "o": [
+          "Makes it public",
+          "Prevents reassignment after initialization",
+          "Deletes it after use",
+          "Makes it static"
+        ],
+        "a": 1,
+        "e": "A `final` variable can only be assigned once — reassigning it causes a compile error."
+      },
+      {
+        "q": "What is the default value of a boolean instance variable in Java?",
+        "o": [
+          "true",
+          "false",
+          "null",
+          "0"
+        ],
+        "a": 1,
+        "e": "Uninitialized boolean fields default to false in Java (unlike local variables, which must be explicitly initialized)."
+      },
+      {
+        "q": "Which collection interface does NOT allow duplicate elements?",
+        "o": [
+          "List",
+          "Set",
+          "Map",
+          "Queue"
+        ],
+        "a": 1,
+        "e": "Set enforces uniqueness — adding a duplicate element has no effect. List and Queue allow duplicates."
+      },
+      {
+        "q": "What is used to handle multiple inheritance of type in Java?",
+        "o": [
+          "Multiple class extends",
+          "Interfaces",
+          "Abstract classes only",
+          "Java doesn't support this at all"
+        ],
+        "a": 1,
+        "e": "Java classes can only extend one class, but can implement multiple interfaces, approximating multiple inheritance."
+      },
+      {
+        "q": "What does the `static` keyword mean for a method?",
+        "o": [
+          "It can only be called once",
+          "It belongs to the class, not an instance",
+          "It runs before main()",
+          "It cannot return a value"
+        ],
+        "a": 1,
+        "e": "A static method belongs to the class itself and can be called without creating an object of that class."
+      },
+      {
+        "q": "Which block always executes, whether or not an exception is thrown?",
+        "o": [
+          "catch",
+          "finally",
+          "throw",
+          "try"
+        ],
+        "a": 1,
+        "e": "The `finally` block runs regardless of whether an exception occurred, making it ideal for cleanup code."
+      },
+      {
+        "q": "What does JVM stand for?",
+        "o": [
+          "Java Virtual Machine",
+          "Java Verified Method",
+          "Java Variable Manager",
+          "Joint Virtual Module"
+        ],
+        "a": 0,
+        "e": "The JVM executes compiled Java bytecode, enabling Java's 'write once, run anywhere' portability."
+      },
+      {
+        "q": "Which operator is used to create a new object in Java?",
+        "o": [
+          "create",
+          "new",
+          "alloc",
+          "make"
+        ],
+        "a": 1,
+        "e": "The `new` keyword allocates memory for an object and calls its constructor, e.g. `new Car()`."
+      },
+      {
+        "q": "What is method overloading?",
+        "o": [
+          "Redefining a method in a subclass",
+          "Multiple methods with the same name but different parameters",
+          "Calling a method too many times",
+          "A runtime error"
+        ],
+        "a": 1,
+        "e": "Overloading lets a class have several methods with the same name as long as their parameter lists differ."
+      },
+      {
+        "q": "What is method overriding?",
+        "o": [
+          "Creating a method with a new name",
+          "A subclass providing its own implementation of a method already defined in its superclass",
+          "Deleting a parent method",
+          "A compile-time-only feature"
+        ],
+        "a": 1,
+        "e": "Overriding lets a subclass replace the behavior of an inherited method, resolved at runtime (polymorphism)."
+      },
+      {
+        "q": "Which keyword prevents a class from being subclassed?",
+        "o": [
+          "static",
+          "final",
+          "private",
+          "abstract"
+        ],
+        "a": 1,
+        "e": "Marking a class `final` prevents any other class from extending it."
+      },
+      {
+        "q": "What is the purpose of an interface in Java?",
+        "o": [
+          "To create instance variables",
+          "To define a contract of methods that implementing classes must provide",
+          "To store data only",
+          "To replace exceptions"
+        ],
+        "a": 1,
+        "e": "An interface declares method signatures without implementation, and implementing classes must supply the behavior."
+      },
+      {
+        "q": "What does the `this` keyword refer to?",
+        "o": [
+          "The parent class",
+          "The current instance of the class",
+          "A static variable",
+          "The main method"
+        ],
+        "a": 1,
+        "e": "`this` refers to the current object instance, often used to distinguish instance variables from parameters with the same name."
+      },
+      {
+        "q": "What is an abstract class?",
+        "o": [
+          "A class that cannot have any methods",
+          "A class that cannot be instantiated directly and may contain abstract methods",
+          "A class with only static methods",
+          "A synonym for interface"
+        ],
+        "a": 1,
+        "e": "An abstract class can have both implemented and unimplemented (abstract) methods, and must be subclassed to be used."
+      },
+      {
+        "q": "What does `ArrayList` provide over a plain array?",
+        "o": [
+          "Fixed size only",
+          "A dynamically resizable list with built-in methods",
+          "Faster access always",
+          "Automatic sorting"
+        ],
+        "a": 1,
+        "e": "ArrayList can grow or shrink at runtime and provides methods like add(), remove(), and contains(), unlike fixed-size arrays."
+      },
+      {
+        "q": "What exception is thrown when dividing an integer by zero in Java?",
+        "o": [
+          "NullPointerException",
+          "ArithmeticException",
+          "ArrayIndexOutOfBoundsException",
+          "ClassCastException"
+        ],
+        "a": 1,
+        "e": "Integer division by zero throws ArithmeticException at runtime (note: floating-point division by zero yields Infinity instead)."
+      },
+      {
+        "q": "What does `equals()` compare, by default, if not overridden?",
+        "o": [
+          "Object content",
+          "Reference/memory address (same as ==)",
+          "Hash codes only",
+          "Nothing, it always throws"
+        ],
+        "a": 1,
+        "e": "The default Object.equals() implementation compares references, same as ==, unless a class overrides it to compare content."
+      },
+      {
+        "q": "What is a constructor?",
+        "o": [
+          "A method that destroys objects",
+          "A special method used to initialize a newly created object",
+          "A static utility method",
+          "A type of loop"
+        ],
+        "a": 1,
+        "e": "A constructor has the same name as its class and is automatically called when an object is instantiated with `new`."
+      },
+      {
+        "q": "What does the `super` keyword do?",
+        "o": [
+          "Refers to the current object",
+          "Refers to the immediate parent class, used to call its constructor or methods",
+          "Declares a static method",
+          "Creates a new thread"
+        ],
+        "a": 1,
+        "e": "`super` lets a subclass access its parent class's constructor, methods, or fields, especially useful for extending behavior."
+      },
+      {
+        "q": "Which access modifier makes a member accessible only within its own class?",
+        "o": [
+          "public",
+          "protected",
+          "private",
+          "default"
+        ],
+        "a": 2,
+        "e": "`private` restricts access to within the declaring class only — not even subclasses can access it directly."
+      },
+      {
+        "q": "What does the `throws` keyword in a method signature indicate?",
+        "o": [
+          "The method definitely throws an error",
+          "The method may throw a checked exception that callers must handle or declare",
+          "The method returns void",
+          "The method is abstract"
+        ],
+        "a": 1,
+        "e": "`throws` declares that a method might propagate a checked exception, requiring callers to handle it via try/catch or their own throws clause."
+      },
+      {
+        "q": "What is autoboxing in Java?",
+        "o": [
+          "Manually converting int to Integer",
+          "The automatic conversion between a primitive type and its corresponding wrapper class",
+          "A memory leak",
+          "A compiler error"
+        ],
+        "a": 1,
+        "e": "Autoboxing automatically converts primitives (like int) to their wrapper objects (like Integer) when needed, and vice versa (unboxing)."
+      },
+      {
+        "q": "What does `HashMap` store?",
+        "o": [
+          "Only unique values with no keys",
+          "Key-value pairs with fast average-time lookup by key",
+          "Sorted keys only",
+          "A fixed-size array of values"
+        ],
+        "a": 1,
+        "e": "HashMap stores key-value pairs and provides average O(1) time complexity for get/put operations based on hashing."
+      },
+      {
+        "q": "What is the purpose of the `package` keyword?",
+        "o": [
+          "To import a library",
+          "To organize related classes into a namespace",
+          "To compile the code",
+          "To declare a variable"
+        ],
+        "a": 1,
+        "e": "Packages group related classes/interfaces together, helping avoid naming conflicts and organizing code logically."
+      },
+      {
+        "q": "What does `String` immutability mean in Java?",
+        "o": [
+          "Strings can never be read",
+          "Once created, a String object's contents cannot be changed",
+          "Strings are always empty",
+          "Strings are stored on the stack only"
+        ],
+        "a": 1,
+        "e": "Java Strings are immutable — operations like concatenation create new String objects rather than modifying the original."
+      },
+      {
+        "q": "What is polymorphism in object-oriented Java?",
+        "o": [
+          "Having multiple constructors",
+          "The ability of an object to take many forms, typically via method overriding",
+          "Storing multiple data types in an array",
+          "A type of exception"
+        ],
+        "a": 1,
+        "e": "Polymorphism lets a subclass object be treated as its superclass type while still executing its own overridden method behavior."
+      },
+      {
+        "q": "What does the `instanceof` operator check in Java?",
+        "o": [
+          "If two objects are equal",
+          "If an object is an instance of a specified class or interface",
+          "If a variable is null",
+          "If a method exists"
+        ],
+        "a": 1,
+        "e": "instanceof tests whether an object is an instance of a given type, often used before casting."
+      },
+      {
+        "q": "What is a checked exception?",
+        "o": [
+          "An exception ignored by the compiler",
+          "An exception that must be either caught or declared in the method signature",
+          "An exception that only occurs at runtime",
+          "A synonym for Error"
+        ],
+        "a": 1,
+        "e": "Checked exceptions (like IOException) are verified at compile time — the compiler forces you to handle or declare them."
+      },
+      {
+        "q": "What does the `enum` keyword define?",
+        "o": [
+          "A dynamic array",
+          "A special class representing a fixed set of constants",
+          "A loop structure",
+          "An anonymous class"
+        ],
+        "a": 1,
+        "e": "enum defines a type consisting of a fixed set of named constant values, e.g. `enum Day { MON, TUE, WED }`."
+      },
+      {
+        "q": "What is garbage collection in Java?",
+        "o": [
+          "Manual memory deallocation by the programmer",
+          "Automatic reclamation of memory used by objects no longer referenced",
+          "A compiler optimization only",
+          "A type of exception handling"
+        ],
+        "a": 1,
+        "e": "The JVM's garbage collector automatically frees memory occupied by objects that are no longer reachable, so developers don't manage memory manually."
+      },
+      {
+        "q": "What does `List<String>` demonstrate?",
+        "o": [
+          "A raw, untyped list",
+          "Generics — specifying the type of elements a collection holds",
+          "A static method",
+          "An abstract class"
+        ],
+        "a": 1,
+        "e": "Generics let you specify the type parameter (here, String) a collection works with, providing compile-time type safety."
+      },
+      {
+        "q": "What is the difference between `==` and `.equals()` for objects in Java?",
+        "o": [
+          "No difference",
+          "== compares references; .equals() (if overridden) compares logical content",
+          ".equals() is faster always",
+          "== only works on primitives"
+        ],
+        "a": 1,
+        "e": "== checks whether two references point to the same object in memory, while .equals() can be overridden to compare actual content, as String does."
+      },
+      {
+        "q": "What does the `synchronized` keyword do?",
+        "o": [
+          "Speeds up a method",
+          "Restricts a method or block to be executed by only one thread at a time",
+          "Deletes shared variables",
+          "Converts code to run in parallel automatically"
+        ],
+        "a": 1,
+        "e": "synchronized ensures mutual exclusion — only one thread can execute a synchronized block/method on a given object at a time, preventing race conditions."
+      },
+      {
+        "q": "What is the purpose of a `try-with-resources` statement?",
+        "o": [
+          "To catch multiple exceptions at once",
+          "To automatically close resources (like files or streams) when the block finishes",
+          "To retry a failed operation",
+          "To declare static resources"
+        ],
+        "a": 1,
+        "e": "try-with-resources automatically calls close() on resources implementing AutoCloseable once the try block completes, even if an exception occurs."
+      },
+      {
+        "q": "What does `Integer.parseInt(\"42\")` return?",
+        "o": [
+          "The string \"42\"",
+          "The int value 42",
+          "An Integer object only",
+          "A ClassCastException"
+        ],
+        "a": 1,
+        "e": "parseInt() converts a String representation of a number into a primitive int value."
+      },
+      {
+        "q": "What is the difference between `ArrayList` and `LinkedList`?",
+        "o": [
+          "No functional difference",
+          "ArrayList offers fast random access; LinkedList offers faster insertion/removal at the ends",
+          "LinkedList cannot store objects",
+          "ArrayList is always slower"
+        ],
+        "a": 1,
+        "e": "ArrayList is backed by a resizable array (fast index access), while LinkedList is backed by nodes (efficient insert/remove at the ends, slower random access)."
+      },
+      {
+        "q": "What does the `protected` access modifier allow?",
+        "o": [
+          "Access from anywhere",
+          "Access within the same package and by subclasses in other packages",
+          "Access only within the same class",
+          "No access at all"
+        ],
+        "a": 1,
+        "e": "protected members are visible within their own package and to subclasses even outside the package, striking a middle ground between private and public."
+      },
+      {
+        "q": "What is a lambda expression in Java used for?",
+        "o": [
+          "Declaring a class",
+          "Providing a concise way to implement a functional interface's single method",
+          "Replacing all loops",
+          "Managing memory manually"
+        ],
+        "a": 1,
+        "e": "Lambda expressions provide a compact syntax for implementing functional interfaces (interfaces with a single abstract method), like Runnable or Comparator."
+      },
+      {
+        "q": "What does `Collections.sort(list)` do?",
+        "o": [
+          "Reverses the list",
+          "Sorts the list in natural (ascending) order",
+          "Removes duplicates",
+          "Shuffles the list"
+        ],
+        "a": 1,
+        "e": "Collections.sort() arranges list elements into their natural ascending order, using the Comparable interface unless a custom Comparator is given."
+      },
+      {
+        "q": "What does NullPointerException indicate?",
+        "o": [
+          "An array index is out of bounds",
+          "An attempt was made to use a reference that points to no object (null)",
+          "A division by zero occurred",
+          "A file wasn't found"
+        ],
+        "a": 1,
+        "e": "NullPointerException is thrown when code tries to call a method or access a field on a reference that is null."
+      },
+      {
+        "q": "What is the purpose of the `Comparable` interface?",
+        "o": [
+          "To compare memory addresses",
+          "To define a natural ordering for objects of a class via compareTo()",
+          "To make a class immutable",
+          "To handle exceptions"
+        ],
+        "a": 1,
+        "e": "Implementing Comparable lets objects define their own natural sort order, used by methods like Collections.sort()."
+      },
+      {
+        "q": "What does casting `(int) 5.9` produce?",
+        "o": [
+          "6",
+          "5",
+          "5.9",
+          "Compile error"
+        ],
+        "a": 1,
+        "e": "Casting a double to int truncates the decimal part (no rounding), so (int) 5.9 produces 5."
+      },
+      {
+        "q": "What is the purpose of the `@Override` annotation?",
+        "o": [
+          "To make a method static",
+          "To indicate a method is intended to override a superclass method, enabling compiler checks",
+          "To hide a method from subclasses",
+          "To improve runtime performance"
+        ],
+        "a": 1,
+        "e": "@Override tells the compiler to verify the method actually overrides a superclass/interface method, catching typos or signature mismatches at compile time."
+      },
+      {
+        "q": "What does a `Scanner` object commonly do in Java?",
+        "o": [
+          "Compiles Java source code",
+          "Reads input, e.g. from the console or a file",
+          "Formats output text",
+          "Manages threads"
+        ],
+        "a": 1,
+        "e": "Scanner is used to parse and read input, most commonly from System.in (the console) or a file."
+      },
+      {
+        "q": "What is an anonymous class?",
+        "o": [
+          "A class with a private constructor",
+          "A class declared and instantiated in a single expression, without a named class definition",
+          "A class with no methods",
+          "A static nested class"
+        ],
+        "a": 1,
+        "e": "An anonymous class lets you define and instantiate a one-off class implementation inline, often used for quick interface implementations."
+      },
+      {
+        "q": "What does the `volatile` keyword indicate for a variable?",
+        "o": [
+          "It cannot be changed",
+          "Its value may be modified by multiple threads, so reads/writes go directly to main memory",
+          "It is a constant",
+          "It is thread-local"
+        ],
+        "a": 1,
+        "e": "volatile ensures visibility of changes to a variable across threads by preventing caching of its value in thread-local memory."
+      },
+      {
+        "q": "What does `StringBuilder` provide over regular String concatenation in a loop?",
+        "o": [
+          "No real benefit",
+          "Better performance by avoiding creation of many intermediate immutable String objects",
+          "Automatic sorting",
+          "Thread safety by default"
+        ],
+        "a": 1,
+        "e": "Since Strings are immutable, repeated concatenation creates many temporary objects; StringBuilder mutates an internal buffer instead, which is much more efficient in loops."
+      }
+    ]
+  },
+  "cpp": {
+    "name": "C++",
+    "short": "C++",
+    "color": "#bb9af7",
+    "q": [
+      {
+        "q": "Which header is required for `std::cout`?",
+        "o": [
+          "<stdio.h>",
+          "<iostream>",
+          "<string>",
+          "<output>"
+        ],
+        "a": 1,
+        "e": "std::cout and std::cin come from the <iostream> header, the standard I/O stream library in C++."
+      },
+      {
+        "q": "What does the `&` symbol mean when used in a function parameter, e.g. `void f(int &x)`?",
+        "o": [
+          "Bitwise AND",
+          "Pointer to x",
+          "Pass by reference",
+          "Multiply by x"
+        ],
+        "a": 2,
+        "e": "An & in a parameter declares a reference — the function operates directly on the original variable, not a copy."
+      },
+      {
+        "q": "What does `new` do in C++?",
+        "o": [
+          "Declares a variable",
+          "Allocates memory on the heap",
+          "Starts a new function",
+          "Creates a comment"
+        ],
+        "a": 1,
+        "e": "`new` dynamically allocates memory on the heap and returns a pointer to it; it must be paired with `delete`."
+      },
+      {
+        "q": "Which keyword defines a class member that can't be modified after construction?",
+        "o": [
+          "static",
+          "const",
+          "final",
+          "readonly"
+        ],
+        "a": 1,
+        "e": "`const` on a member variable prevents it from being modified after initialization."
+      },
+      {
+        "q": "What is the purpose of a destructor in C++?",
+        "o": [
+          "To create an object",
+          "To copy an object",
+          "To clean up resources when an object is destroyed",
+          "To compare two objects"
+        ],
+        "a": 2,
+        "e": "A destructor (~ClassName()) runs automatically when an object goes out of scope or is deleted, freeing resources."
+      },
+      {
+        "q": "What does `std::vector` provide compared to a raw C-style array?",
+        "o": [
+          "Nothing extra",
+          "A dynamically resizable array with built-in bounds-safe methods",
+          "Faster fixed-size storage only",
+          "Automatic multithreading"
+        ],
+        "a": 1,
+        "e": "std::vector manages its own memory and can grow or shrink at runtime, unlike fixed-size raw arrays."
+      },
+      {
+        "q": "What does the scope resolution operator `::` do?",
+        "o": [
+          "Ends a statement",
+          "Accesses a member of a namespace or class",
+          "Declares a pointer",
+          "Comments out code"
+        ],
+        "a": 1,
+        "e": ":: is used to specify which namespace or class a name belongs to, e.g. `std::cout` or `MyClass::myMethod`."
+      },
+      {
+        "q": "Which of these correctly declares a pointer to an int?",
+        "o": [
+          "int ptr;",
+          "int *ptr;",
+          "ptr int;",
+          "int &ptr;"
+        ],
+        "a": 1,
+        "e": "The asterisk `*` in a declaration marks the variable as a pointer, e.g. `int *ptr;` stores the address of an int."
+      },
+      {
+        "q": "What is function overloading resolved by, at compile time, in C++?",
+        "o": [
+          "Return type only",
+          "Number and types of parameters",
+          "Function body length",
+          "Variable names inside the function"
+        ],
+        "a": 1,
+        "e": "The compiler picks the matching overload based on the number and types of arguments passed at the call site."
+      },
+      {
+        "q": "What does `delete` do to a pointer created with `new`?",
+        "o": [
+          "Sets it to nullptr automatically",
+          "Frees the heap memory it points to",
+          "Deletes the pointer variable itself",
+          "Converts it to a reference"
+        ],
+        "a": 1,
+        "e": "`delete` frees the memory allocated with `new`. It does not automatically null the pointer, a common source of dangling pointers."
+      },
+      {
+        "q": "What is a template in C++ used for?",
+        "o": [
+          "Formatting console output",
+          "Writing generic, type-independent code",
+          "Creating GUI layouts",
+          "Managing memory leaks automatically"
+        ],
+        "a": 1,
+        "e": "Templates let you write a function or class once and have it work with any data type, e.g. `template<typename T>`."
+      },
+      {
+        "q": "Which access specifier makes members accessible only within the class itself?",
+        "o": [
+          "public",
+          "protected",
+          "private",
+          "internal"
+        ],
+        "a": 2,
+        "e": "`private` members can only be accessed from within the same class (not by subclasses or outside code)."
+      },
+      {
+        "q": "What does RAII stand for and represent in C++?",
+        "o": [
+          "Random Access Iterator Interface",
+          "Resource Acquisition Is Initialization — tying resource lifetime to object lifetime",
+          "A memory allocation algorithm",
+          "A type of exception"
+        ],
+        "a": 1,
+        "e": "RAII means resources (memory, files, locks) are acquired in a constructor and released in a destructor, ensuring automatic cleanup."
+      },
+      {
+        "q": "What is the difference between `struct` and `class` in C++?",
+        "o": [
+          "No difference at all",
+          "Members default to public in struct, private in class",
+          "struct cannot have methods",
+          "class cannot be inherited"
+        ],
+        "a": 1,
+        "e": "The only structural difference is default access: struct members are public by default, while class members are private by default."
+      },
+      {
+        "q": "What does a virtual function enable in C++?",
+        "o": [
+          "Faster compilation",
+          "Runtime polymorphism — the correct overridden function is called via a base class pointer/reference",
+          "Static memory allocation",
+          "Automatic type conversion"
+        ],
+        "a": 1,
+        "e": "Declaring a function virtual allows derived classes to override it, and the correct version is resolved at runtime based on the actual object type."
+      },
+      {
+        "q": "What is a smart pointer like `std::unique_ptr` used for?",
+        "o": [
+          "Faster arithmetic",
+          "Automatically managing (and freeing) dynamically allocated memory",
+          "Declaring global variables",
+          "Sorting arrays"
+        ],
+        "a": 1,
+        "e": "Smart pointers wrap raw pointers and automatically free the memory when they go out of scope, helping prevent memory leaks."
+      },
+      {
+        "q": "What does `const` before a function parameter like `const int &x` guarantee?",
+        "o": [
+          "x can still be modified inside the function",
+          "The function cannot modify x through that reference",
+          "x is passed by value, not reference",
+          "The function is inline"
+        ],
+        "a": 1,
+        "e": "const on a reference parameter means the function receives the argument efficiently (by reference) but promises not to modify it."
+      },
+      {
+        "q": "What is operator overloading in C++?",
+        "o": [
+          "Using too many operators in one line",
+          "Defining custom behavior for operators (like +, ==) for user-defined types",
+          "A compiler error",
+          "A memory management technique"
+        ],
+        "a": 1,
+        "e": "Operator overloading lets you define how operators behave for your own classes, e.g. overloading + to add two custom Vector objects."
+      },
+      {
+        "q": "What does `std::string` provide over a C-style char array?",
+        "o": [
+          "Nothing, they're identical",
+          "Dynamic resizing, bounds-aware methods, and easier concatenation",
+          "Faster access always",
+          "Automatic encryption"
+        ],
+        "a": 1,
+        "e": "std::string manages its own memory and provides convenient methods (length(), substr(), +) unlike fixed, manually-managed char arrays."
+      },
+      {
+        "q": "What happens if a class has a pure virtual function?",
+        "o": [
+          "The class becomes abstract and cannot be instantiated directly",
+          "The program fails to compile always",
+          "The function is automatically implemented",
+          "It becomes a static function"
+        ],
+        "a": 0,
+        "e": "A class with at least one pure virtual function (declared with = 0) becomes abstract; it must be subclassed and the function implemented before instantiation."
+      },
+      {
+        "q": "What does `#include` do in C++?",
+        "o": [
+          "Defines a new function",
+          "Inserts the contents of another file (often a header) into the current file before compilation",
+          "Declares a variable",
+          "Starts the main function"
+        ],
+        "a": 1,
+        "e": "The preprocessor directive #include textually inserts the referenced file's contents, typically declarations from a header file."
+      },
+      {
+        "q": "What is the difference between stack and heap memory in C++?",
+        "o": [
+          "No difference",
+          "Stack memory is automatically managed and fast; heap memory is manually managed via new/delete and more flexible",
+          "Heap is always faster",
+          "Stack memory persists after the function returns"
+        ],
+        "a": 1,
+        "e": "Stack memory is automatically allocated/freed as functions are called and return, while heap memory persists until explicitly freed, offering more control but requiring manual management."
+      },
+      {
+        "q": "What does the `friend` keyword allow in a class?",
+        "o": [
+          "Making all members public",
+          "Granting a specific external function or class access to private/protected members",
+          "Declaring a derived class",
+          "Preventing inheritance"
+        ],
+        "a": 1,
+        "e": "A friend function or class is granted access to the private and protected members of the class that declares it as a friend."
+      },
+      {
+        "q": "What is the purpose of `std::make_unique<T>()`?",
+        "o": [
+          "To copy a unique_ptr",
+          "To safely create and return a std::unique_ptr, avoiding manual new calls",
+          "To delete a pointer",
+          "To create a shared_ptr instead"
+        ],
+        "a": 1,
+        "e": "make_unique constructs an object and wraps it in a unique_ptr in one safe step, avoiding potential leaks from separate new/wrap calls."
+      },
+      {
+        "q": "What does multiple inheritance in C++ allow?",
+        "o": [
+          "A class to inherit from only one base class",
+          "A class to inherit from more than one base class simultaneously",
+          "Interfaces to have implementations",
+          "Nothing, C++ disallows this"
+        ],
+        "a": 1,
+        "e": "Unlike Java, C++ directly supports a class inheriting from multiple base classes at once, though this can introduce complications like the 'diamond problem'."
+      },
+      {
+        "q": "What is an iterator in C++ used for?",
+        "o": [
+          "Declaring loops only",
+          "Traversing elements of a container (like vector, list, map) in a uniform way",
+          "Compiling templates",
+          "Allocating memory"
+        ],
+        "a": 1,
+        "e": "Iterators provide a generic interface to move through and access elements of STL containers, similar to pointers."
+      },
+      {
+        "q": "What does `static` mean when applied to a class member variable?",
+        "o": [
+          "It's shared across all instances of the class rather than per-object",
+          "It can only be used inside main()",
+          "It's automatically const",
+          "It cannot be initialized"
+        ],
+        "a": 0,
+        "e": "A static member variable belongs to the class itself, not any individual object, so all instances share the same single copy."
+      },
+      {
+        "q": "What is the purpose of exception handling with `try/catch/throw` in C++?",
+        "o": [
+          "To speed up execution",
+          "To detect and respond to runtime errors without crashing the program",
+          "To declare templates",
+          "To manage memory automatically"
+        ],
+        "a": 1,
+        "e": "try/throw/catch lets code signal an error condition (throw) and handle it gracefully elsewhere (catch), rather than letting the program crash."
+      },
+      {
+        "q": "What does `sizeof(int)` typically return on most modern systems?",
+        "o": [
+          "1",
+          "2",
+          "4",
+          "8"
+        ],
+        "a": 2,
+        "e": "On most modern 32-bit and 64-bit systems, an int is 4 bytes, though this is platform/compiler-dependent per the C++ standard."
+      },
+      {
+        "q": "What is the difference between `std::map` and `std::unordered_map`?",
+        "o": [
+          "No difference",
+          "std::map keeps keys sorted (tree-based); std::unordered_map does not (hash-based, generally faster lookup)",
+          "unordered_map cannot store duplicates differently",
+          "map is always faster"
+        ],
+        "a": 1,
+        "e": "std::map is typically implemented as a balanced tree with sorted keys and O(log n) operations, while unordered_map uses hashing for average O(1) operations but no ordering."
+      },
+      {
+        "q": "What does passing an argument 'by value' mean in C++?",
+        "o": [
+          "The function receives a reference to the original variable",
+          "The function receives a copy of the argument, so changes don't affect the original",
+          "The argument is passed as a pointer only",
+          "The function cannot use the argument"
+        ],
+        "a": 1,
+        "e": "Pass-by-value copies the argument into the function's parameter, so modifications inside the function don't affect the caller's original variable."
+      },
+      {
+        "q": "What is a namespace used for in C++?",
+        "o": [
+          "Declaring functions as private",
+          "Grouping related identifiers to avoid naming conflicts",
+          "Allocating memory",
+          "Defining templates only"
+        ],
+        "a": 1,
+        "e": "Namespaces (like std) group related names together and prevent naming collisions between different parts of a codebase or libraries."
+      },
+      {
+        "q": "What does the `explicit` keyword prevent on a single-argument constructor?",
+        "o": [
+          "Direct instantiation",
+          "Implicit type conversions from that argument type",
+          "Copying the object",
+          "Inheritance"
+        ],
+        "a": 1,
+        "e": "explicit stops the compiler from silently using that constructor for implicit conversions, which can prevent subtle bugs."
+      },
+      {
+        "q": "What is the purpose of a copy constructor?",
+        "o": [
+          "To delete an object",
+          "To create a new object as a copy of an existing object of the same class",
+          "To compare two objects",
+          "To convert types"
+        ],
+        "a": 1,
+        "e": "A copy constructor initializes a new object using the values of an existing object of the same class, e.g. `MyClass b(a);`."
+      },
+      {
+        "q": "What does `std::shared_ptr` allow, unlike `std::unique_ptr`?",
+        "o": [
+          "Nothing different",
+          "Multiple pointers to jointly own and manage the same resource, freed when the last owner is gone",
+          "Faster raw pointer access",
+          "Static-only allocation"
+        ],
+        "a": 1,
+        "e": "shared_ptr uses reference counting so multiple smart pointers can share ownership of the same object, which is deallocated only when the last shared_ptr is destroyed."
+      },
+      {
+        "q": "What is undefined behavior in C++?",
+        "o": [
+          "A compiler warning",
+          "Code whose behavior the standard does not define, e.g. dereferencing a null pointer",
+          "A syntax error caught at compile time",
+          "A guaranteed crash"
+        ],
+        "a": 1,
+        "e": "Undefined behavior means the C++ standard places no requirements on what happens — the program might crash, produce wrong output, or appear to work, unpredictably."
+      },
+      {
+        "q": "What does the `auto` keyword do in modern C++?",
+        "o": [
+          "Declares a global variable",
+          "Lets the compiler deduce a variable's type from its initializer",
+          "Marks a function as automatic/inline",
+          "Declares a constant"
+        ],
+        "a": 1,
+        "e": "auto tells the compiler to infer the variable's type from the expression used to initialize it, reducing verbosity especially with complex types."
+      },
+      {
+        "q": "What does `std::sort()` require of the range it sorts?",
+        "o": [
+          "Nothing, it works on any container directly",
+          "Random-access iterators, such as those from vector or array",
+          "The elements must be strings",
+          "The container must be a linked list"
+        ],
+        "a": 1,
+        "e": "std::sort requires random-access iterators (like those of vector or array) because of how it partitions data; containers like std::list need their own sort method instead."
+      },
+      {
+        "q": "What is the purpose of `const` correctness in a C++ codebase?",
+        "o": [
+          "To make code compile faster",
+          "To communicate and enforce which data shouldn't be modified, catching bugs at compile time",
+          "To reduce binary size",
+          "To enable multithreading"
+        ],
+        "a": 1,
+        "e": "Consistent use of const documents intent and lets the compiler catch accidental modifications of data that shouldn't change, improving code safety."
+      },
+      {
+        "q": "What does a segmentation fault typically indicate?",
+        "o": [
+          "A missing semicolon",
+          "The program accessed memory it isn't allowed to access",
+          "A type mismatch caught at compile time",
+          "An infinite loop"
+        ],
+        "a": 1,
+        "e": "A segfault occurs at runtime when a program tries to read or write memory it doesn't have permission to access, often from bad pointers."
+      },
+      {
+        "q": "What does the `->` operator do on a pointer to an object?",
+        "o": [
+          "Compares two pointers",
+          "Accesses a member of the object the pointer points to",
+          "Declares a new pointer",
+          "Performs subtraction"
+        ],
+        "a": 1,
+        "e": "`ptr->member` is shorthand for `(*ptr).member` — it dereferences the pointer and accesses a member of the pointed-to object."
+      },
+      {
+        "q": "What is move semantics (`std::move`) primarily used to avoid?",
+        "o": [
+          "Type conversions",
+          "Unnecessary deep copies of resources like heap memory, by transferring ownership instead",
+          "Function overloading",
+          "Namespace conflicts"
+        ],
+        "a": 1,
+        "e": "std::move casts an object to an rvalue reference, allowing its resources to be 'moved' (transferred) rather than expensively copied."
+      },
+      {
+        "q": "What does the C++ Standard Template Library (STL) primarily provide?",
+        "o": [
+          "Only I/O functions",
+          "Generic containers, iterators, and algorithms like vector, map, and sort",
+          "A GUI framework",
+          "A networking library"
+        ],
+        "a": 1,
+        "e": "The STL is a collection of template-based containers (vector, map, set), iterators, and algorithms (sort, find) forming the core of everyday C++ programming."
+      },
+      {
+        "q": "What does `nullptr` represent in modern C++?",
+        "o": [
+          "The integer zero",
+          "A type-safe null pointer constant",
+          "An undefined pointer",
+          "A reference to void"
+        ],
+        "a": 1,
+        "e": "nullptr was introduced to replace the older NULL/0 convention with a distinct, type-safe representation of a null pointer."
+      },
+      {
+        "q": "What is a lambda expression in C++ used for?",
+        "o": [
+          "Declaring global functions only",
+          "Defining small, often throwaway, anonymous functions inline",
+          "Managing memory automatically",
+          "Creating new classes"
+        ],
+        "a": 1,
+        "e": "Lambdas let you write short anonymous functions directly where they're needed, e.g. as arguments to std::sort for custom comparisons."
+      },
+      {
+        "q": "What does the `inline` keyword suggest to the compiler?",
+        "o": [
+          "To allocate the function on the heap",
+          "To attempt replacing calls to the function with its body, potentially avoiding call overhead",
+          "To make the function virtual",
+          "To make the function private"
+        ],
+        "a": 1,
+        "e": "inline is a hint asking the compiler to substitute the function's code directly at the call site instead of performing a full function call, potentially improving performance for small functions."
+      },
+      {
+        "q": "What is the diamond problem in the context of multiple inheritance?",
+        "o": [
+          "A syntax error",
+          "Ambiguity when a class inherits from two classes that share a common base class",
+          "A memory leak pattern",
+          "An issue unique to templates"
+        ],
+        "a": 1,
+        "e": "When two parent classes both inherit from the same base class, a derived class inheriting from both ends up with two copies of the base, causing ambiguity unless resolved with virtual inheritance."
+      },
+      {
+        "q": "What does `std::pair` represent?",
+        "o": [
+          "A single value",
+          "A simple container holding exactly two values, possibly of different types",
+          "A dynamic array",
+          "A type of exception"
+        ],
+        "a": 1,
+        "e": "std::pair bundles two values (of potentially different types) together, commonly used as map entries or simple return values."
+      },
+      {
+        "q": "What does the `override` keyword (introduced in C++11) do?",
+        "o": [
+          "Nothing, it's just documentation",
+          "Tells the compiler to verify the method actually overrides a virtual base class method",
+          "Makes a function static",
+          "Prevents further overriding"
+        ],
+        "a": 1,
+        "e": "override lets the compiler check that the function genuinely overrides a virtual function in the base class, catching signature mismatches at compile time."
+      },
+      {
+        "q": "What does `std::array` provide compared to a raw C-style array?",
+        "o": [
+          "No real difference",
+          "A fixed-size container with STL-style methods like size() and bounds-checked access via at()",
+          "Dynamic resizing",
+          "Automatic sorting"
+        ],
+        "a": 1,
+        "e": "std::array wraps a fixed-size array with STL container conveniences (size(), begin()/end(), at()) while retaining the same performance as a raw array."
+      }
+    ]
+  },
+  "web": {
+    "name": "HTML / CSS",
+    "short": "WEB",
+    "color": "#73daca",
+    "q": [
+      {
+        "q": "Which HTML tag is used to link an external stylesheet?",
+        "o": [
+          "<style>",
+          "<css>",
+          "<link>",
+          "<script>"
+        ],
+        "a": 2,
+        "e": "<link rel=\"stylesheet\" href=\"...\"> in the <head> connects an external CSS file to the HTML document."
+      },
+      {
+        "q": "In CSS, what does `display: flex` do to an element's children?",
+        "o": [
+          "Hides them",
+          "Arranges them using flexible box layout",
+          "Makes them absolute",
+          "Deletes their margins"
+        ],
+        "a": 1,
+        "e": "Flexbox lays out children in a row or column and provides powerful alignment and spacing controls."
+      },
+      {
+        "q": "Which CSS property controls the space between an element's border and its content?",
+        "o": [
+          "margin",
+          "padding",
+          "spacing",
+          "border-gap"
+        ],
+        "a": 1,
+        "e": "Padding is the space inside the border, between the border and the content. Margin is the space outside the border."
+      },
+      {
+        "q": "What does the `alt` attribute on an `<img>` tag provide?",
+        "o": [
+          "A caption below the image",
+          "Alternative text for accessibility/if the image fails to load",
+          "The image's file size",
+          "A border style"
+        ],
+        "a": 1,
+        "e": "alt text is read by screen readers and shown if the image can't load, making it essential for accessibility."
+      },
+      {
+        "q": "Which CSS selector targets an element with `id=\"header\"`?",
+        "o": [
+          ".header",
+          "#header",
+          "*header",
+          "header{}"
+        ],
+        "a": 1,
+        "e": "The # symbol selects elements by their id attribute. A dot (.) is used for classes instead."
+      },
+      {
+        "q": "What does the CSS box model NOT include?",
+        "o": [
+          "Margin",
+          "Border",
+          "Padding",
+          "Animation"
+        ],
+        "a": 3,
+        "e": "The box model consists of content, padding, border, and margin. Animation is a separate CSS feature."
+      },
+      {
+        "q": "Which HTML5 tag is used to define navigation links?",
+        "o": [
+          "<nav>",
+          "<navigation>",
+          "<menu>",
+          "<links>"
+        ],
+        "a": 0,
+        "e": "<nav> is a semantic HTML5 element specifically meant to wrap a block of navigation links."
+      },
+      {
+        "q": "What does `position: absolute` position an element relative to?",
+        "o": [
+          "The browser window only",
+          "Its nearest positioned ancestor",
+          "The mouse cursor",
+          "The <body> tag always"
+        ],
+        "a": 1,
+        "e": "An absolutely positioned element is placed relative to its closest ancestor with a position other than static; otherwise it falls back to the document."
+      },
+      {
+        "q": "Which unit in CSS is relative to the root element's font size?",
+        "o": [
+          "em",
+          "px",
+          "rem",
+          "vh"
+        ],
+        "a": 2,
+        "e": "`rem` (root em) is always relative to the font-size of the <html> element, making it consistent no matter how deeply nested."
+      },
+      {
+        "q": "What does `z-index` control?",
+        "o": [
+          "Zoom level",
+          "Stacking order along the depth axis",
+          "Font weight",
+          "Element width"
+        ],
+        "a": 1,
+        "e": "z-index determines which overlapping element appears in front of another; higher values stack on top of lower ones."
+      },
+      {
+        "q": "Which CSS property makes text bold?",
+        "o": [
+          "text-style",
+          "font-weight",
+          "text-decoration",
+          "font-style"
+        ],
+        "a": 1,
+        "e": "font-weight: bold (or a numeric value like 700) controls text boldness. font-style is for italics."
+      },
+      {
+        "q": "What does the `<form>` attribute `method=\"post\"` do?",
+        "o": [
+          "Sends data in the URL, visible to users",
+          "Sends data in the request body, not visible in the URL",
+          "Prevents the form from submitting",
+          "Deletes form data after submit"
+        ],
+        "a": 1,
+        "e": "POST sends form data in the request body, keeping it out of the URL — useful for larger or sensitive data, unlike GET."
+      },
+      {
+        "q": "What does the `<!DOCTYPE html>` declaration do?",
+        "o": [
+          "Links a stylesheet",
+          "Tells the browser to render the page using modern HTML5 standards",
+          "Starts a comment",
+          "Defines the page title"
+        ],
+        "a": 1,
+        "e": "The doctype declaration ensures the browser uses standards mode (HTML5) rather than a legacy quirks mode for rendering."
+      },
+      {
+        "q": "Which CSS property is used to create rounded corners?",
+        "o": [
+          "corner-radius",
+          "border-radius",
+          "round-corner",
+          "corner-style"
+        ],
+        "a": 1,
+        "e": "border-radius rounds the corners of an element's box, accepting values like pixels or percentages."
+      },
+      {
+        "q": "What does `display: none` do to an element?",
+        "o": [
+          "Makes it transparent but keeps its space",
+          "Removes it from the layout entirely, as if it doesn't exist",
+          "Hides it but keeps it clickable",
+          "Only hides its text"
+        ],
+        "a": 1,
+        "e": "display: none removes the element from the document flow completely — it takes up no space, unlike visibility: hidden."
+      },
+      {
+        "q": "What is the purpose of CSS Grid's `grid-template-columns`?",
+        "o": [
+          "To set the number and size of rows",
+          "To define the number and size of columns in a grid container",
+          "To add borders to a grid",
+          "To animate grid items"
+        ],
+        "a": 1,
+        "e": "grid-template-columns defines how many columns a grid has and their widths, e.g. `grid-template-columns: 1fr 2fr;`."
+      },
+      {
+        "q": "Which HTML tag is semantically correct for the main heading of a page?",
+        "o": [
+          "<head>",
+          "<h1>",
+          "<title>",
+          "<header>"
+        ],
+        "a": 1,
+        "e": "<h1> represents the top-level heading of a page or section, important for both semantics and accessibility."
+      },
+      {
+        "q": "What does the `class` attribute allow, unlike `id`?",
+        "o": [
+          "Nothing different",
+          "Multiple elements to share the same styling hook, and one element to have multiple classes",
+          "Only one use per page",
+          "Direct JavaScript execution"
+        ],
+        "a": 1,
+        "e": "Unlike id (meant to be unique per page), class can be applied to many elements, and an element can have multiple space-separated classes."
+      },
+      {
+        "q": "What does the CSS `flex-direction: column` property do?",
+        "o": [
+          "Arranges flex items vertically instead of the default horizontal row",
+          "Deletes flex items",
+          "Adds a scrollbar",
+          "Wraps items automatically"
+        ],
+        "a": 0,
+        "e": "flex-direction: column stacks flex items top to bottom instead of the default left-to-right row arrangement."
+      },
+      {
+        "q": "What is the purpose of the `<meta name=\"viewport\">` tag?",
+        "o": [
+          "To set the page title",
+          "To control layout and scaling on mobile devices",
+          "To link a stylesheet",
+          "To define page keywords for SEO only"
+        ],
+        "a": 1,
+        "e": "The viewport meta tag tells mobile browsers how to control the page's dimensions and scaling, essential for responsive design."
+      },
+      {
+        "q": "Which CSS pseudo-class targets an element when the mouse is over it?",
+        "o": [
+          ":focus",
+          ":hover",
+          ":active",
+          ":visited"
+        ],
+        "a": 1,
+        "e": ":hover applies styles while the user's pointer is positioned over the element."
+      },
+      {
+        "q": "What does `overflow: hidden` do to content that exceeds an element's box?",
+        "o": [
+          "Adds a scrollbar",
+          "Clips the overflowing content, hiding what doesn't fit",
+          "Shrinks the font automatically",
+          "Expands the box to fit"
+        ],
+        "a": 1,
+        "e": "overflow: hidden clips any content that extends beyond the element's box, without providing scrollbars."
+      },
+      {
+        "q": "What is the difference between `<div>` and `<span>`?",
+        "o": [
+          "No difference",
+          "div is block-level; span is inline-level",
+          "span cannot hold text",
+          "div is only for images"
+        ],
+        "a": 1,
+        "e": "div is a block-level element (starts a new line, takes full width), while span is inline (flows within text, only as wide as its content)."
+      },
+      {
+        "q": "What does CSS specificity determine?",
+        "o": [
+          "Page load speed",
+          "Which conflicting CSS rule takes precedence when multiple rules target the same element",
+          "Browser compatibility",
+          "File size of the stylesheet"
+        ],
+        "a": 1,
+        "e": "Specificity is the algorithm browsers use to decide which rule 'wins' when multiple selectors match the same element with conflicting properties."
+      },
+      {
+        "q": "Which attribute makes an HTML input field required before form submission?",
+        "o": [
+          "mandatory",
+          "required",
+          "validate",
+          "needed"
+        ],
+        "a": 1,
+        "e": "Adding the boolean `required` attribute to an input prevents form submission until that field has a value."
+      },
+      {
+        "q": "What does `box-sizing: border-box` change about width calculations?",
+        "o": [
+          "Width no longer includes anything",
+          "Width includes padding and border, not just content",
+          "It disables the box model entirely",
+          "It only affects margin"
+        ],
+        "a": 1,
+        "e": "With border-box, the specified width/height includes padding and border, making sizing far more predictable than the default content-box."
+      },
+      {
+        "q": "What is the purpose of media queries in CSS?",
+        "o": [
+          "To load images faster",
+          "To apply different styles based on device characteristics like screen width",
+          "To validate HTML",
+          "To compress CSS files"
+        ],
+        "a": 1,
+        "e": "Media queries like `@media (max-width: 600px)` let you apply CSS conditionally based on viewport size or other device features, enabling responsive design."
+      },
+      {
+        "q": "What does the `<table>` element's `<thead>` tag represent?",
+        "o": [
+          "The table's footer",
+          "The header row(s) grouping of a table",
+          "A single table cell",
+          "The table's caption"
+        ],
+        "a": 1,
+        "e": "<thead> semantically groups the header content of a table, typically containing column labels."
+      },
+      {
+        "q": "Which CSS property controls the stacking order relative to siblings, and requires `position` to not be `static`?",
+        "o": [
+          "order",
+          "z-index",
+          "float",
+          "clear"
+        ],
+        "a": 1,
+        "e": "z-index only has an effect on elements with a position value other than the default static (e.g. relative, absolute, fixed)."
+      },
+      {
+        "q": "What does `<a href=\"#section1\">` link to?",
+        "o": [
+          "An external website",
+          "An element on the same page with id=\"section1\"",
+          "Nothing, it's invalid",
+          "A downloadable file always"
+        ],
+        "a": 1,
+        "e": "A hash (#) href jumps to the element on the current page whose id matches the fragment, e.g. id=\"section1\"."
+      },
+      {
+        "q": "What is the purpose of `localStorage` in web development?",
+        "o": [
+          "Storing data temporarily until the tab is closed",
+          "Storing key-value data in the browser that persists across sessions",
+          "Sending data to a server automatically",
+          "Compressing images"
+        ],
+        "a": 1,
+        "e": "localStorage persists data in the browser with no expiration date, unlike sessionStorage (cleared when the tab closes) or cookies (sent with every request)."
+      },
+      {
+        "q": "Which CSS property is used to add space between flex or grid items?",
+        "o": [
+          "spacing",
+          "gap",
+          "margin-between",
+          "item-gap"
+        ],
+        "a": 1,
+        "e": "The `gap` property (and gap-related shorthand) sets consistent spacing between flex or grid items without needing individual margins."
+      },
+      {
+        "q": "What does the `<button type=\"submit\">` do inside a form?",
+        "o": [
+          "Resets the form fields",
+          "Submits the form data when clicked",
+          "Deletes the form",
+          "Nothing without JavaScript"
+        ],
+        "a": 1,
+        "e": "A button with type=\"submit\" triggers the form's submission when clicked, sending its data per the form's method and action."
+      },
+      {
+        "q": "What is the CSS `:nth-child()` pseudo-class used for?",
+        "o": [
+          "Selecting an element by its class name",
+          "Selecting elements based on their position among sibling elements",
+          "Selecting only the last element",
+          "Selecting elements by id"
+        ],
+        "a": 1,
+        "e": "`:nth-child(n)` selects elements based on their numeric position among their siblings, e.g. `:nth-child(2n)` for even-positioned elements."
+      },
+      {
+        "q": "What does the HTML `<label>` element's `for` attribute do?",
+        "o": [
+          "Sets the label's color",
+          "Associates the label with a specific form control by matching its id",
+          "Deletes the label",
+          "Adds a tooltip"
+        ],
+        "a": 1,
+        "e": "for=\"inputId\" links a label to its input, so clicking the label focuses/activates the associated form control — important for accessibility."
+      },
+      {
+        "q": "What does `text-align: center` do?",
+        "o": [
+          "Centers an element horizontally within its parent",
+          "Centers inline content/text within its containing box",
+          "Centers the whole page",
+          "Vertically centers text"
+        ],
+        "a": 1,
+        "e": "text-align: center horizontally centers inline-level content (like text) within its block container; it doesn't center the block element itself."
+      },
+      {
+        "q": "What is a CSS variable (custom property) declared with?",
+        "o": [
+          "A double dash prefix like --main-color",
+          "A dollar sign like $main-color",
+          "A hash like #main-color",
+          "An at-sign like @main-color"
+        ],
+        "a": 0,
+        "e": "CSS custom properties are declared with a double-hyphen prefix (--name: value;) and accessed with var(--name)."
+      },
+      {
+        "q": "What does the `<script defer>` attribute do?",
+        "o": [
+          "Runs the script before HTML parsing begins",
+          "Delays script execution until after the HTML document has been parsed",
+          "Deletes the script after running once",
+          "Prevents the script from ever running"
+        ],
+        "a": 1,
+        "e": "defer tells the browser to download the script in parallel but execute it only after the document has finished parsing, preserving order for multiple deferred scripts."
+      },
+      {
+        "q": "What does `justify-content: space-between` do in a flex container?",
+        "o": [
+          "Centers all items with no space",
+          "Distributes items evenly with the first item at the start and the last at the end, equal space between",
+          "Stacks items vertically",
+          "Hides overflowing items"
+        ],
+        "a": 1,
+        "e": "space-between places the first and last flex items flush against the container edges, distributing remaining space evenly between the items."
+      },
+      {
+        "q": "What is the purpose of the `<picture>` element?",
+        "o": [
+          "To embed a single fixed image",
+          "To provide multiple image sources so the browser can pick the best one for the context/screen",
+          "To create image galleries automatically",
+          "To compress images"
+        ],
+        "a": 1,
+        "e": "<picture> lets you specify multiple <source> images (for different resolutions or formats), letting the browser choose the most appropriate one."
+      },
+      {
+        "q": "What does the CSS `transition` property animate?",
+        "o": [
+          "Only color changes",
+          "Smooth changes of a property's value over a specified duration when it changes",
+          "Page load transitions between URLs",
+          "Font loading"
+        ],
+        "a": 1,
+        "e": "transition (e.g. `transition: all 0.3s ease;`) smoothly animates a CSS property from its old value to its new value over the given time."
+      },
+      {
+        "q": "What is the difference between `visibility: hidden` and `display: none`?",
+        "o": [
+          "No difference",
+          "visibility: hidden keeps the element's space in the layout, display: none removes it entirely",
+          "display: none is reversible with JS but visibility: hidden isn't",
+          "visibility: hidden deletes the element"
+        ],
+        "a": 1,
+        "e": "An element with visibility: hidden is invisible but still occupies its layout space, while display: none removes it from the layout completely."
+      },
+      {
+        "q": "What does `<input type=\"email\">` provide over a plain text input?",
+        "o": [
+          "Nothing different",
+          "Built-in browser validation for a basic email format, plus a relevant mobile keyboard",
+          "Automatic form submission",
+          "Password masking"
+        ],
+        "a": 1,
+        "e": "type=\"email\" triggers basic client-side format validation and often switches mobile keyboards to show an @ key, improving usability."
+      },
+      {
+        "q": "What is the CSS cascade?",
+        "o": [
+          "A layout technique",
+          "The algorithm that determines which styles apply when multiple rules could apply to the same element",
+          "A JavaScript animation library",
+          "A grid system"
+        ],
+        "a": 1,
+        "e": "The cascade combines specificity, source order, and origin (author/user/browser styles) to resolve conflicting CSS declarations."
+      },
+      {
+        "q": "What does `<iframe>` embed into a page?",
+        "o": [
+          "A stylesheet",
+          "Another HTML document within the current page",
+          "A JavaScript file",
+          "An image only"
+        ],
+        "a": 1,
+        "e": "<iframe> embeds another HTML page (like a video player or map) as a nested browsing context within the current document."
+      },
+      {
+        "q": "What does the CSS `clamp()` function do?",
+        "o": [
+          "Rounds a number",
+          "Sets a value that scales between a minimum and maximum bound based on a preferred value",
+          "Clips overflowing content",
+          "Converts units"
+        ],
+        "a": 1,
+        "e": "clamp(min, preferred, max) lets a value (often font-size) respond fluidly to the viewport while staying within defined bounds — common in responsive typography."
+      },
+      {
+        "q": "What is semantic HTML?",
+        "o": [
+          "HTML written in a specific programming language",
+          "Using HTML elements according to their meaning (e.g. <article>, <nav>) rather than only for appearance",
+          "HTML that includes inline styles",
+          "A deprecated HTML version"
+        ],
+        "a": 1,
+        "e": "Semantic HTML uses tags that describe their content's meaning and role (like <header>, <footer>, <article>), improving accessibility and SEO over generic <div> soup."
+      },
+      {
+        "q": "What does `<link rel=\"icon\">` specify?",
+        "o": [
+          "The page's main stylesheet",
+          "The favicon shown in the browser tab",
+          "The page's canonical URL",
+          "An external font"
+        ],
+        "a": 1,
+        "e": "This link tag tells the browser which small icon (favicon) to display in the browser tab, bookmarks, and history."
+      },
+      {
+        "q": "What does the CSS `opacity` property control?",
+        "o": [
+          "Element width",
+          "The transparency level of an element, from 0 (invisible) to 1 (fully opaque)",
+          "Text color only",
+          "Border thickness"
+        ],
+        "a": 1,
+        "e": "opacity sets how transparent an element (including its content) appears, ranging from 0 (fully transparent) to 1 (fully opaque)."
+      },
+      {
+        "q": "What does the `<button>` element default to if no `type` attribute is set inside a form?",
+        "o": [
+          "type=\"button\"",
+          "type=\"submit\"",
+          "type=\"reset\"",
+          "No default, it errors"
+        ],
+        "a": 1,
+        "e": "Inside a <form>, a <button> without an explicit type defaults to type=\"submit\", which can cause accidental form submissions if not set deliberately."
+      }
+    ]
+  },
+  "sql": {
+    "name": "SQL",
+    "short": "SQL",
+    "color": "#ff9e64",
+    "q": [
+      {
+        "q": "Which SQL keyword is used to retrieve data from a table?",
+        "o": [
+          "GET",
+          "SELECT",
+          "FETCH",
+          "SHOW"
+        ],
+        "a": 1,
+        "e": "SELECT is the fundamental keyword for querying and retrieving rows from one or more tables."
+      },
+      {
+        "q": "What does the `WHERE` clause do?",
+        "o": [
+          "Sorts the results",
+          "Filters rows based on a condition",
+          "Groups rows together",
+          "Joins two tables"
+        ],
+        "a": 1,
+        "e": "WHERE filters which rows are returned based on a boolean condition, applied before any grouping."
+      },
+      {
+        "q": "Which JOIN returns only rows that have matches in both tables?",
+        "o": [
+          "LEFT JOIN",
+          "RIGHT JOIN",
+          "INNER JOIN",
+          "FULL OUTER JOIN"
+        ],
+        "a": 2,
+        "e": "INNER JOIN returns only the rows where the join condition matches in both tables, excluding unmatched rows."
+      },
+      {
+        "q": "What does `GROUP BY` do?",
+        "o": [
+          "Sorts rows alphabetically",
+          "Groups rows sharing a value so aggregate functions can be applied",
+          "Removes duplicate rows only",
+          "Joins two tables together"
+        ],
+        "a": 1,
+        "e": "GROUP BY clusters rows with matching values in specified columns, commonly used with COUNT, SUM, AVG, etc."
+      },
+      {
+        "q": "Which statement is used to add new rows to a table?",
+        "o": [
+          "ADD",
+          "INSERT INTO",
+          "CREATE ROW",
+          "APPEND"
+        ],
+        "a": 1,
+        "e": "INSERT INTO tablename VALUES (...) adds one or more new rows to a table."
+      },
+      {
+        "q": "What does `PRIMARY KEY` guarantee for a column?",
+        "o": [
+          "It can contain duplicate values",
+          "It uniquely identifies each row and cannot be NULL",
+          "It's always an auto-incrementing integer",
+          "It must be a string"
+        ],
+        "a": 1,
+        "e": "A PRIMARY KEY enforces uniqueness and non-null values, giving every row a reliable identifier."
+      },
+      {
+        "q": "Which clause removes duplicate rows from query results?",
+        "o": [
+          "UNIQUE",
+          "DISTINCT",
+          "FILTER",
+          "NODUPES"
+        ],
+        "a": 1,
+        "e": "SELECT DISTINCT returns only unique rows, collapsing any exact duplicates in the result set."
+      },
+      {
+        "q": "What does `ORDER BY salary DESC` do?",
+        "o": [
+          "Filters out low salaries",
+          "Sorts results by salary from highest to lowest",
+          "Groups rows by salary",
+          "Deletes rows with low salary"
+        ],
+        "a": 1,
+        "e": "ORDER BY sorts the result set; DESC means descending order, so the highest salary appears first."
+      },
+      {
+        "q": "Which SQL statement is used to modify existing rows?",
+        "o": [
+          "MODIFY",
+          "UPDATE",
+          "CHANGE",
+          "ALTER"
+        ],
+        "a": 1,
+        "e": "UPDATE tablename SET column = value WHERE condition modifies existing rows that match the condition. ALTER changes table structure, not data."
+      },
+      {
+        "q": "What does a `FOREIGN KEY` do?",
+        "o": [
+          "Encrypts a column",
+          "Links a column to a primary key in another table",
+          "Makes a column optional",
+          "Speeds up all queries automatically"
+        ],
+        "a": 1,
+        "e": "A FOREIGN KEY enforces referential integrity by requiring values in one table to match existing values in another table's key."
+      },
+      {
+        "q": "Which aggregate function returns the number of rows matching a query?",
+        "o": [
+          "SUM()",
+          "COUNT()",
+          "TOTAL()",
+          "LEN()"
+        ],
+        "a": 1,
+        "e": "COUNT() tallies the number of rows (or non-null values in a column) returned by a query."
+      },
+      {
+        "q": "What does `LEFT JOIN` return that `INNER JOIN` does not?",
+        "o": [
+          "Nothing different",
+          "All rows from the left table, even without a match on the right",
+          "All rows from the right table only",
+          "Only matched rows"
+        ],
+        "a": 1,
+        "e": "LEFT JOIN keeps every row from the left table, filling in NULLs for columns from the right table when there's no match."
+      },
+      {
+        "q": "What does the `HAVING` clause do that `WHERE` cannot?",
+        "o": [
+          "Filters individual rows before grouping",
+          "Filters groups after aggregation, e.g. HAVING COUNT(*) > 5",
+          "Sorts the results",
+          "Joins tables"
+        ],
+        "a": 1,
+        "e": "HAVING filters aggregated group results (like the output of GROUP BY), while WHERE filters individual rows before any grouping occurs."
+      },
+      {
+        "q": "What does `DELETE FROM table WHERE condition` do without a WHERE clause?",
+        "o": [
+          "Deletes nothing",
+          "Deletes all rows in the table",
+          "Drops the entire table structure",
+          "Only deletes the first row"
+        ],
+        "a": 1,
+        "e": "Without a WHERE clause, DELETE removes every row in the table, though the table structure itself remains (unlike DROP TABLE)."
+      },
+      {
+        "q": "What is the difference between `DROP TABLE` and `TRUNCATE TABLE`?",
+        "o": [
+          "No difference",
+          "DROP removes the table structure entirely; TRUNCATE removes all rows but keeps the structure",
+          "TRUNCATE is slower always",
+          "DROP only removes data"
+        ],
+        "a": 1,
+        "e": "DROP TABLE deletes the table and its schema completely, while TRUNCATE TABLE quickly empties all rows but leaves the table definition intact."
+      },
+      {
+        "q": "What does a `NULL` value represent in SQL?",
+        "o": [
+          "The number zero",
+          "An unknown or missing value",
+          "An empty string",
+          "A default value of 0"
+        ],
+        "a": 1,
+        "e": "NULL represents the absence of a value or an unknown value — it is not the same as 0 or an empty string, and requires special handling in comparisons."
+      },
+      {
+        "q": "Which operator is used to check if a value is NULL?",
+        "o": [
+          "= NULL",
+          "IS NULL",
+          "== NULL",
+          "LIKE NULL"
+        ],
+        "a": 1,
+        "e": "Because NULL represents an unknown value, you can't compare it with =; instead you use `IS NULL` (or `IS NOT NULL`)."
+      },
+      {
+        "q": "What does the SQL `LIKE` operator with `%` do?",
+        "o": [
+          "Matches exact values only",
+          "Matches a pattern where % represents any sequence of characters",
+          "Performs a mathematical modulo operation",
+          "Deletes matching rows"
+        ],
+        "a": 1,
+        "e": "LIKE performs pattern matching; % is a wildcard matching zero or more characters, e.g. `WHERE name LIKE 'A%'` matches names starting with A."
+      },
+      {
+        "q": "What is a subquery?",
+        "o": [
+          "A query with a syntax error",
+          "A query nested inside another SQL query",
+          "A query that only returns one column",
+          "A deprecated SQL feature"
+        ],
+        "a": 1,
+        "e": "A subquery is a SELECT statement nested inside another query (in WHERE, FROM, or SELECT), often used to filter based on the result of another query."
+      },
+      {
+        "q": "What does `ALTER TABLE` allow you to do?",
+        "o": [
+          "Only delete a table",
+          "Modify an existing table's structure, e.g. adding or removing columns",
+          "Insert new rows",
+          "Query data"
+        ],
+        "a": 1,
+        "e": "ALTER TABLE changes the schema of an existing table — adding, dropping, or modifying columns — without affecting existing row data directly."
+      },
+      {
+        "q": "What is a database index primarily used for?",
+        "o": [
+          "Storing backup copies of data",
+          "Speeding up data retrieval by avoiding full table scans",
+          "Encrypting sensitive columns",
+          "Enforcing foreign key constraints"
+        ],
+        "a": 1,
+        "e": "An index creates a fast lookup structure (often a B-tree) on one or more columns, dramatically speeding up SELECT queries that filter or sort on those columns."
+      },
+      {
+        "q": "What does `UNION` do when combining two SELECT queries?",
+        "o": [
+          "Joins tables side by side",
+          "Combines their results into one result set, removing duplicate rows by default",
+          "Multiplies the result sets together",
+          "Runs the queries sequentially with no combination"
+        ],
+        "a": 1,
+        "e": "UNION stacks the results of two compatible SELECT statements vertically into one set, removing duplicates (use UNION ALL to keep them)."
+      },
+      {
+        "q": "What does `AVG()` calculate?",
+        "o": [
+          "The total sum of a column",
+          "The average (mean) value of a numeric column",
+          "The number of rows",
+          "The highest value"
+        ],
+        "a": 1,
+        "e": "AVG() computes the arithmetic mean of the values in a specified numeric column across the matched rows."
+      },
+      {
+        "q": "What is the purpose of the `AS` keyword in SQL?",
+        "o": [
+          "To create a new table",
+          "To assign an alias to a column or table for readability",
+          "To delete a column",
+          "To join two tables"
+        ],
+        "a": 1,
+        "e": "AS lets you rename a column or table in the query's output, e.g. `SELECT name AS full_name`, without changing the underlying schema."
+      },
+      {
+        "q": "What does a composite key consist of?",
+        "o": [
+          "A single auto-incrementing column",
+          "Two or more columns combined to uniquely identify a row",
+          "A foreign key only",
+          "An index on one column"
+        ],
+        "a": 1,
+        "e": "A composite (or compound) key uses multiple columns together as the unique identifier for a row, useful when no single column is unique on its own."
+      },
+      {
+        "q": "What does the `BETWEEN` operator do?",
+        "o": [
+          "Checks if a value falls within an inclusive range",
+          "Compares two tables",
+          "Joins two conditions with OR",
+          "Excludes NULL values"
+        ],
+        "a": 0,
+        "e": "BETWEEN x AND y filters for values that fall within the inclusive range from x to y."
+      },
+      {
+        "q": "What is database normalization primarily intended to reduce?",
+        "o": [
+          "Query speed",
+          "Data redundancy and improve data integrity",
+          "The number of tables",
+          "The need for primary keys"
+        ],
+        "a": 1,
+        "e": "Normalization organizes data into related tables to minimize duplicate data and reduce anomalies when inserting, updating, or deleting records."
+      },
+      {
+        "q": "What does a `RIGHT JOIN` return that an `INNER JOIN` would not?",
+        "o": [
+          "Rows only from the left table",
+          "All rows from the right table, even those without a match in the left table",
+          "No rows at all",
+          "Only matched rows"
+        ],
+        "a": 1,
+        "e": "RIGHT JOIN preserves every row from the right table, filling unmatched columns from the left table with NULL."
+      },
+      {
+        "q": "What does the `IN` operator do?",
+        "o": [
+          "Checks if a value matches any value in a specified list or subquery",
+          "Inserts a new row",
+          "Joins two tables",
+          "Groups results"
+        ],
+        "a": 0,
+        "e": "IN simplifies multiple OR conditions, e.g. `WHERE country IN ('US', 'UK', 'CA')` checks if the value matches any item in the list."
+      },
+      {
+        "q": "What is a view in SQL?",
+        "o": [
+          "A physical copy of a table's data",
+          "A saved, virtual table defined by a query, which can be queried like a real table",
+          "A type of index",
+          "A backup mechanism"
+        ],
+        "a": 1,
+        "e": "A view stores a SELECT query definition and presents its result as a virtual table, without duplicating the underlying data."
+      },
+      {
+        "q": "What does `COUNT(DISTINCT column)` do?",
+        "o": [
+          "Counts all rows including duplicates",
+          "Counts only the unique, non-null values in that column",
+          "Counts NULL values only",
+          "Returns an error"
+        ],
+        "a": 1,
+        "e": "COUNT(DISTINCT column) tallies how many unique values exist in that column, ignoring duplicates and NULLs."
+      },
+      {
+        "q": "What is a transaction in SQL used for?",
+        "o": [
+          "Formatting query output",
+          "Grouping multiple statements so they all succeed or all fail together (atomicity)",
+          "Creating indexes automatically",
+          "Renaming tables"
+        ],
+        "a": 1,
+        "e": "A transaction (BEGIN...COMMIT/ROLLBACK) ensures a group of operations is applied atomically — either all changes succeed, or none do, preserving data consistency."
+      },
+      {
+        "q": "What does `ROLLBACK` do within a transaction?",
+        "o": [
+          "Permanently saves all changes",
+          "Undoes changes made in the current transaction back to the last commit point",
+          "Deletes the table",
+          "Speeds up the query"
+        ],
+        "a": 1,
+        "e": "ROLLBACK reverts any uncommitted changes made during the current transaction, restoring the data to its prior state."
+      },
+      {
+        "q": "What does the `EXISTS` operator check?",
+        "o": [
+          "If a table has any columns",
+          "Whether a subquery returns at least one row",
+          "If a value is NULL",
+          "If two tables have the same schema"
+        ],
+        "a": 1,
+        "e": "EXISTS returns true if the given subquery returns one or more rows, often used for efficient existence checks without needing the actual data."
+      },
+      {
+        "q": "What is a self-join?",
+        "o": [
+          "Joining a table to itself, usually via aliases, to compare rows within the same table",
+          "A syntax error",
+          "Joining two unrelated tables",
+          "A join that returns no results"
+        ],
+        "a": 0,
+        "e": "A self-join treats a single table as two by using aliases, useful for comparing rows to other rows in the same table, like employees to their managers."
+      },
+      {
+        "q": "What does `CASE WHEN ... THEN ... ELSE ... END` provide in a SQL query?",
+        "o": [
+          "A way to loop over rows",
+          "Conditional logic within a SELECT statement, similar to if/else",
+          "A way to delete conditionally",
+          "A join condition"
+        ],
+        "a": 1,
+        "e": "The CASE expression lets you return different values based on conditions directly within a query, similar to an if/else statement in other languages."
+      },
+      {
+        "q": "What is the purpose of `LIMIT` (or `TOP` in some databases)?",
+        "o": [
+          "To restrict the number of rows returned by a query",
+          "To limit which columns are selected",
+          "To set a maximum column width",
+          "To restrict write access"
+        ],
+        "a": 0,
+        "e": "LIMIT (or TOP/FETCH depending on the database) caps how many rows a query returns, often used with ORDER BY for 'top N' queries."
+      },
+      {
+        "q": "What does `NOT NULL` as a column constraint enforce?",
+        "o": [
+          "The column must always contain the value 0",
+          "The column cannot contain NULL values — every row must have a value",
+          "The column must be unique",
+          "The column is read-only"
+        ],
+        "a": 1,
+        "e": "A NOT NULL constraint requires that every row have an actual value in that column, rejecting inserts or updates that leave it empty."
+      },
+      {
+        "q": "What does a CROSS JOIN produce?",
+        "o": [
+          "Only matching rows",
+          "The Cartesian product — every row from the first table paired with every row from the second",
+          "No rows at all",
+          "Rows sorted alphabetically"
+        ],
+        "a": 1,
+        "e": "CROSS JOIN pairs every row of one table with every row of another, with no join condition, resulting in rows_A × rows_B total rows."
+      },
+      {
+        "q": "What is the purpose of `CREATE INDEX` on a column that's frequently searched?",
+        "o": [
+          "To delete duplicate rows",
+          "To speed up lookups and filtering on that column at the cost of some extra storage and write overhead",
+          "To enforce uniqueness automatically",
+          "To encrypt the column"
+        ],
+        "a": 1,
+        "e": "An index trades some storage space and slightly slower writes for much faster reads/searches on the indexed column(s)."
+      },
+      {
+        "q": "What does `UPDATE table SET col = col + 1` do?",
+        "o": [
+          "Sets col to exactly 1 for all rows",
+          "Increments the value of col by 1 for every row matching the query (or all rows if no WHERE)",
+          "Deletes the col column",
+          "Causes a syntax error"
+        ],
+        "a": 1,
+        "e": "This updates each matched row by taking its current value of col and adding 1, applied row by row."
+      },
+      {
+        "q": "What does the `DEFAULT` constraint do for a column?",
+        "o": [
+          "Makes the column required",
+          "Automatically supplies a specified value for the column if none is given during insert",
+          "Prevents updates to the column",
+          "Sets the column as a primary key"
+        ],
+        "a": 1,
+        "e": "A DEFAULT constraint provides a fallback value automatically used when an INSERT statement doesn't specify a value for that column."
+      },
+      {
+        "q": "What does a stored procedure allow you to do?",
+        "o": [
+          "Only read data, never write it",
+          "Save a reusable, precompiled block of SQL logic that can be executed with a single call",
+          "Automatically back up a database",
+          "Create a new database"
+        ],
+        "a": 1,
+        "e": "A stored procedure bundles one or more SQL statements into a named, reusable routine stored in the database, callable with parameters."
+      },
+      {
+        "q": "What does `SELECT * FROM table` retrieve?",
+        "o": [
+          "Only the first row",
+          "All columns for all rows in the table (subject to any WHERE clause)",
+          "Only column names, no data",
+          "The table's schema definition"
+        ],
+        "a": 1,
+        "e": "The asterisk (*) is a wildcard meaning 'all columns', so this returns every column for every matching row."
+      },
+      {
+        "q": "What is referential integrity in a relational database?",
+        "o": [
+          "Ensuring all queries run quickly",
+          "Ensuring foreign key values always correspond to an existing primary key in the referenced table",
+          "Ensuring column names are unique",
+          "Ensuring tables have indexes"
+        ],
+        "a": 1,
+        "e": "Referential integrity, typically enforced via FOREIGN KEY constraints, prevents orphaned records by requiring foreign key values to match a valid row in the referenced table."
+      },
+      {
+        "q": "What does `GROUP BY department HAVING COUNT(*) > 10` return?",
+        "o": [
+          "All departments regardless of size",
+          "Only departments with more than 10 rows/employees",
+          "Departments sorted by name",
+          "An error, since HAVING needs WHERE"
+        ],
+        "a": 1,
+        "e": "This groups rows by department, then filters (with HAVING) to keep only groups whose row count exceeds 10 — a filter applied after aggregation."
+      },
+      {
+        "q": "What does the `CONCAT()` function typically do?",
+        "o": [
+          "Splits a string into parts",
+          "Joins two or more strings together into one",
+          "Converts a string to a number",
+          "Removes whitespace"
+        ],
+        "a": 1,
+        "e": "CONCAT() combines multiple string values (or columns) into a single string, e.g. CONCAT(first_name, ' ', last_name)."
+      },
+      {
+        "q": "What does `AUTO_INCREMENT` (or SERIAL in some databases) do for a column?",
+        "o": [
+          "Requires manual value entry every time",
+          "Automatically generates a unique, incrementing number for each new row",
+          "Prevents the column from being indexed",
+          "Encrypts the column's values"
+        ],
+        "a": 1,
+        "e": "AUTO_INCREMENT/SERIAL columns automatically assign the next sequential integer value on each insert, commonly used for primary key id columns."
+      },
+      {
+        "q": "What is the main purpose of database schema design?",
+        "o": [
+          "To make queries look nicer",
+          "To define the structure of tables, columns, types, and relationships that store data consistently and efficiently",
+          "To speed up the internet connection",
+          "To automatically write SQL queries"
+        ],
+        "a": 1,
+        "e": "Schema design lays out tables, columns, data types, keys, and relationships up front, shaping how data is stored, validated, and queried throughout an application's life."
+      },
+      {
+        "q": "What does `ROUND(column, 2)` typically do in SQL?",
+        "o": [
+          "Deletes the column",
+          "Rounds a numeric value to 2 decimal places",
+          "Renames the column",
+          "Sorts values ascending"
+        ],
+        "a": 1,
+        "e": "ROUND() rounds a numeric value to a specified number of decimal places, here 2, commonly used for currency or percentage values."
+      }
+    ]
+  }
+};
+
+/* ============ STATE ============ */
+let currentLangKey = null;
+let questions = [];
+let idx = 0;
+let score = 0;
+let answered = false;
+
+/* ============ DOM refs ============ */
+const tabsEl = document.getElementById('tabs');
+const langGridEl = document.getElementById('langGrid');
+const pickerEl = document.getElementById('picker');
+const quizScreenEl = document.getElementById('quizScreen');
+const resultsScreenEl = document.getElementById('resultsScreen');
+const pathLangEl = document.getElementById('pathLang');
+
+const qCountEl = document.getElementById('qCount');
+const scoreValEl = document.getElementById('scoreVal');
+const progressFillEl = document.getElementById('progressFill');
+const qEyebrowEl = document.getElementById('qEyebrow');
+const qTextEl = document.getElementById('qText');
+const optionsEl = document.getElementById('options');
+const feedbackEl = document.getElementById('feedback');
+const verdictEl = document.getElementById('verdict');
+const expEl = document.getElementById('exp');
+const nextBtn = document.getElementById('nextBtn');
+const quitBtn = document.getElementById('quitBtn');
+
+const termLogEl = document.getElementById('termLog');
+const finalScoreEl = document.getElementById('finalScore');
+const finalMsgEl = document.getElementById('finalMsg');
+const chooseBtn = document.getElementById('chooseBtn');
+const retryBtn = document.getElementById('retryBtn');
+
+/* ============ Build language keys incl. Mixed ============ */
+const LANG_KEYS = Object.keys(BANK);
+
+function buildTabs(){
+  tabsEl.innerHTML = '';
+  const entries = [...LANG_KEYS.map(k => [k, BANK[k]]), ['mixed', { name: 'Mixed', short: 'ALL', color: '#c0caf5' }]];
+  entries.forEach(([key, lang]) => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (key === currentLangKey ? ' active' : '');
+    tab.style.setProperty('--tab-color', lang.color);
+    tab.innerHTML = `<span class="sq" style="background:${lang.color}"></span>${lang.short}`;
+    tab.addEventListener('click', () => startQuiz(key));
+    tabsEl.appendChild(tab);
+  });
+}
+
+function buildPicker(){
+  langGridEl.innerHTML = '';
+  LANG_KEYS.forEach(key => {
+    const lang = BANK[key];
+    const card = document.createElement('button');
+    card.className = 'lang-card';
+    card.innerHTML = `
+      <div class="chip" style="background:${lang.color}">${lang.short}</div>
+      <div class="meta">
+        <div class="name">${lang.name}</div>
+        <div class="count">${lang.q.length} questions</div>
+      </div>`;
+    card.addEventListener('click', () => startQuiz(key));
+    langGridEl.appendChild(card);
+  });
+  const mixedCard = document.createElement('button');
+  mixedCard.className = 'lang-card';
+  const totalQ = LANG_KEYS.reduce((s,k) => s + BANK[k].q.length, 0);
+  mixedCard.innerHTML = `
+    <div class="chip" style="background:#c0caf5">ALL</div>
+    <div class="meta">
+      <div class="name">Mixed — All Languages</div>
+      <div class="count">25 random from ${totalQ}</div>
+    </div>`;
+  mixedCard.addEventListener('click', () => startQuiz('mixed'));
+  langGridEl.appendChild(mixedCard);
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz(key){
+  currentLangKey = key;
+  document.documentElement.style.setProperty('--accent', getColor(key));
+
+  if(key === 'mixed'){
+    let all = [];
+    LANG_KEYS.forEach(k => {
+      BANK[k].q.forEach(q => all.push({...q, langName: BANK[k].name, langColor: BANK[k].color}));
+    });
+    questions = shuffle(all).slice(0, 25);
+    pathLangEl.textContent = 'mixed.quiz';
+  } else {
+    const lang = BANK[key];
+    questions = lang.q.map(q => ({...q, langName: lang.name, langColor: lang.color}));
+    pathLangEl.textContent = key + '.quiz';
+  }
+
+  idx = 0;
+  score = 0;
+  answered = false;
+
+  buildTabs();
+  pickerEl.classList.add('hidden');
+  resultsScreenEl.classList.add('hidden');
+  quizScreenEl.classList.remove('hidden');
+
+  renderQuestion();
+}
+
+function getColor(key){
+  if(key === 'mixed') return '#c0caf5';
+  return BANK[key].color;
+}
+
+function renderQuestion(){
+  answered = false;
+  const q = questions[idx];
+  const total = questions.length;
+
+  qCountEl.textContent = `Question ${idx + 1} / ${total}`;
+  scoreValEl.textContent = score;
+  progressFillEl.style.width = `${(idx / total) * 100}%`;
+  qEyebrowEl.textContent = `// ${q.langName || BANK[currentLangKey].name}`;
+  document.documentElement.style.setProperty('--tab-color', q.langColor || getColor(currentLangKey));
+
+  qTextEl.textContent = q.q;
+
+  optionsEl.innerHTML = '';
+  const letters = ['a', 'b', 'c', 'd'];
+  q.o.forEach((optText, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = `<span class="letter">${letters[i]})</span><span>${escapeHtml(optText)}</span>`;
+    btn.addEventListener('click', () => selectAnswer(i));
+    optionsEl.appendChild(btn);
+  });
+
+  feedbackEl.classList.remove('show', 'ok', 'bad');
+  nextBtn.classList.remove('show');
+  nextBtn.textContent = idx === total - 1 ? 'see results →' : 'next →';
+  quitBtn.classList.toggle('hidden', idx === 0);
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function selectAnswer(choiceIdx){
+  if(answered) return;
+  answered = true;
+
+  const q = questions[idx];
+  const opts = optionsEl.querySelectorAll('.opt');
+  const correct = choiceIdx === q.a;
+
+  opts.forEach((el, i) => {
+    el.disabled = true;
+    if(i === q.a) el.classList.add('correct');
+    else if(i === choiceIdx) el.classList.add('wrong');
+    else el.classList.add('dim');
+  });
+
+  if(correct){
+    score++;
+    scoreValEl.textContent = score;
+    feedbackEl.classList.add('show', 'ok');
+    verdictEl.innerHTML = '✓ correct';
+  } else {
+    feedbackEl.classList.add('show', 'bad');
+    verdictEl.innerHTML = '✕ incorrect';
+  }
+  expEl.innerHTML = `<span class="rem">/* explanation */</span> ${escapeHtml(q.e)}`;
+
+  progressFillEl.style.width = `${((idx + 1) / questions.length) * 100}%`;
+  nextBtn.classList.add('show');
+}
+
+nextBtn.addEventListener('click', () => {
+  if(!answered) return;
+  if(idx < questions.length - 1){
+    idx++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+});
+
+quitBtn.addEventListener('click', () => {
+  quizScreenEl.classList.add('hidden');
+  pickerEl.classList.remove('hidden');
+  currentLangKey = null;
+  pathLangEl.textContent = 'lang.quiz';
+  document.documentElement.style.setProperty('--accent', '#7aa2f7');
+  buildTabs();
+});
+
+function showResults(){
+  quizScreenEl.classList.add('hidden');
+  resultsScreenEl.classList.remove('hidden');
+
+  const total = questions.length;
+  const pct = Math.round((score / total) * 100);
+
+  finalScoreEl.innerHTML = `${score}<span>/${total}</span>`;
+
+  let msg;
+  if(pct === 100) msg = "Perfect run — every test passed.";
+  else if(pct >= 80) msg = "Strong result. Barely any red in that log.";
+  else if(pct >= 50) msg = "Solid attempt — a few concepts worth revisiting.";
+  else msg = "Rough build — worth another pass through the docs.";
+  finalMsgEl.textContent = msg;
+
+  const langLabel = currentLangKey === 'mixed' ? 'mixed' : BANK[currentLangKey].name.toLowerCase();
+  termLogEl.innerHTML =
+    `<span class="p">$</span> run ${escapeHtml(langLabel)}-quiz.test<br>` +
+    `<span class="p">></span> ${total} tests executed<br>` +
+    `<span class="ok">></span> ${score} passed, ${total - score} failed<br>` +
+    `<span class="p">></span> score: ${pct}%`;
+}
+
+chooseBtn.addEventListener('click', () => {
+  resultsScreenEl.classList.add('hidden');
+  pickerEl.classList.remove('hidden');
+  currentLangKey = null;
+  pathLangEl.textContent = 'lang.quiz';
+  document.documentElement.style.setProperty('--accent', '#7aa2f7');
+  buildTabs();
+});
+
+retryBtn.addEventListener('click', () => {
+  startQuiz(currentLangKey);
+});
+
+
+buildTabs();
+buildPicker();
+</script>
+
+
+</body>
+</html>
